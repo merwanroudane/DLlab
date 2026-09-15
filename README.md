@@ -270,11 +270,20 @@ Linux / macOS:
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
-If pip cannot find the pinned CPU build of PyTorch on your platform:
+`requirements.txt` points Linux installs at the CPU-only PyTorch index
+(`--extra-index-url https://download.pytorch.org/whl/cpu`), so no CUDA wheels are downloaded.
+If pip still cannot find the CPU build on your platform:
 
 ```bash
 pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
 ```
+
+### Deploying on Streamlit Community Cloud
+
+1. Point the app at `streamlit_app.py` on the `main` branch.
+2. In **Advanced settings** choose **Python 3.11** (the repository also carries a `.python-version`).
+3. Deploy — the first build downloads TensorFlow (~620 MB) and CPU PyTorch (~200 MB) and takes a few
+   minutes; later reboots reuse the cached environment.
 
 ---
 
