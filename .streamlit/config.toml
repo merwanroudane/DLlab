@@ -1,0 +1,45 @@
+[server]
+headless = true
+runOnSave = true
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "light"
+# Warm, bright, academic palette (spec §14). No dark navy.
+primaryColor = "#1F7A78"                 # deep teal: buttons, links, active nav
+backgroundColor = "#FFFDF9"              # warm white
+secondaryBackgroundColor = "#FBF4E8"     # cream: widgets, code blocks, cards
+textColor = "#2B2A28"
+linkColor = "#1F7A78"
+borderColor = "#EADFCD"
+codeBackgroundColor = "#F6F1E7"
+codeTextColor = "#2B2A28"
+dataframeBorderColor = "#EADFCD"
+dataframeHeaderBackgroundColor = "#F6EEDF"
+
+# Semantic palette (also mirrored as CSS variables in assets/styles/base.css)
+redColor = "#C8473A"       # loss / failure
+orangeColor = "#C77A1A"    # hyperparameters
+yellowColor = "#B8860B"    # warning
+greenColor = "#2E8B57"     # correct state
+blueColor = "#2F6FB5"      # input / data
+violetColor = "#7C5CBF"    # parameters
+grayColor = "#6B675F"
+
+chartCategoricalColors = ["#2F6FB5", "#7C5CBF", "#C77A1A", "#C8473A", "#1F7A78", "#2E8B57", "#B8860B", "#6B675F"]
+chartSequentialColors = ["#FFF9EC", "#FDEFD2", "#F9E0B4", "#F2CB8E", "#E9B36A", "#DB9A4B", "#C97F33", "#B26421", "#964C15", "#76370D"]
+
+font = "'IBM Plex Sans Arabic':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"
+headingFont = "'IBM Plex Sans Arabic':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@600;700&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+baseFontSize = 16
+codeFontSize = "0.9rem"
+headingFontSizes = ["2rem", "1.55rem", "1.3rem", "1.12rem", "1rem", "0.9rem"]
+headingFontWeights = [700, 700, 600, 600, 600, 600]
+baseRadius = "12px"
+buttonRadius = "10px"
+showWidgetBorder = true
+showSidebarBorder = false
+linkUnderline = false

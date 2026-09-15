@@ -1,0 +1,50 @@
+"""Interactive labs (spec §41). Each lab module exposes LAB and render()."""
+
+from core.models import Section
+
+SECTION = Section(
+    id="labs",
+    title_ar="المعامل التفاعلية",
+    title_en="Interactive Labs",
+    icon=":material/science:",
+    order=3,
+    description_ar="تجارب حية تُشغَّل داخل الصفحة. كل معمل مرتبط بالدروس التي يخدمها.",
+)
+
+LAB_MODULES = [
+    "dataset_anatomy",
+    "epoch_batch_simulator",
+    "tensor_shape_explorer",
+    "vector_matrix",
+    "derivative_lab",
+    "gradient_lab",
+    "chain_rule_lab",
+    "scaling_lab",
+    "data_split_lab",
+    "data_leakage_lab",
+    "neuron_lab",
+    "network_builder",
+    "parameter_counter",
+    "activation_lab",
+    "loss_lab",
+    "gradient_descent_lab",
+    "learning_rate_lab",
+    "optimizer_race",
+    "training_loop_simulator",
+    "confusion_matrix_lab",
+    "threshold_lab",
+    "overfitting_lab",
+    "curves_diagnostic_lab",
+    "regularization_lab",
+    "dropout_lab",
+    "tf_tensor_explorer",
+    "gradient_tape_lab",
+    "torch_tensor_explorer",
+    "cnn_convolution_lab",
+    "padding_stride_lab",
+    "cnn_shape_calculator",
+    "rnn_unrolling_lab",
+    "lstm_gates_lab",
+    "gru_gates_lab",
+    "gpu_batch_memory_lab",
+]

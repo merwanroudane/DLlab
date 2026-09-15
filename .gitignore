@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.streamlit/secrets.toml
+.claude/
+CLAUDE_Deep_Learning_Interactive_Academy_Master_Prompt.md

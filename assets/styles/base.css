@@ -1,0 +1,304 @@
+/* =====================================================================
+   Deep Learning Interactive Academy — design tokens + bidirectional
+   typography system.  See docs/RTL_LTR_GUIDE.md for the rules.
+   ===================================================================== */
+
+:root {
+  /* Surfaces (warm, bright, academic) */
+  --c-bg: #FFFDF9;
+  --c-cream: #FBF4E8;
+  --c-cream-2: #F6EEDF;
+  --c-gray-1: #F3F1EC;
+  --c-border: #EADFCD;
+  --c-text: #2B2A28;
+  --c-muted: #6B675F;
+
+  /* Accents */
+  --c-sky: #DCEEFB;
+  --c-mint: #DDF5EA;
+  --c-teal: #1F7A78;
+  --c-teal-bg: #E0F3F1;
+  --c-coral: #F7D6CF;
+  --c-yellow: #FFF3C4;
+  --c-lavender: #ECE6F7;
+  --c-green: #E3F5EA;
+
+  /* Semantic colours — colour always paired with icon + label (spec §15) */
+  --sem-data: #2F6FB5;      --sem-data-bg: #E6F1FB;
+  --sem-param: #7C5CBF;     --sem-param-bg: #EFE9FA;
+  --sem-hyper: #C77A1A;     --sem-hyper-bg: #FFF1DC;
+  --sem-loss: #C8473A;      --sem-loss-bg: #FBE6E2;
+  --sem-grad: #1F7A78;      --sem-grad-bg: #E0F3F1;
+  --sem-ok: #2E8B57;        --sem-ok-bg: #E3F5EA;
+  --sem-warn: #B8860B;      --sem-warn-bg: #FFF7DB;
+  --sem-fail: #B3261E;      --sem-fail-bg: #FBE4E2;
+
+  --radius: 12px;
+  --shadow-soft: 0 1px 2px rgba(60, 40, 10, 0.06), 0 4px 14px rgba(60, 40, 10, 0.05);
+  --reading-width: 46rem;
+  --font-ar: 'IBM Plex Sans Arabic', 'Noto Naskh Arabic', 'Segoe UI', Tahoma, sans-serif;
+  --font-en: 'Inter', 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-code: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+/* ---------------------------------------------------------------------
+   1. Arabic is the document language: text containers flow RTL.
+   Layout (columns, widgets) stays LTR so Streamlit widgets keep working;
+   only textual content is flipped.
+   --------------------------------------------------------------------- */
+.stMarkdown, [data-testid="stMarkdownContainer"],
+[data-testid="stCaptionContainer"],
+[data-testid="stHeading"], .stHeading,
+[data-testid="stAlertContainer"], .stAlert,
+[data-testid="stExpander"] summary,
+[data-testid="stWidgetLabel"],
+[data-testid="stMetricLabel"],
+.stButton button, .stLinkButton a,
+[data-baseweb="tab"],
+.dlia-rtl {
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: plaintext;
+}
+
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li {
+  line-height: 1.9;
+  max-width: var(--reading-width);
+}
+[data-testid="stMarkdownContainer"] ul,
+[data-testid="stMarkdownContainer"] ol {
+  padding-inline-start: 1.6rem;
+  padding-left: 0;
+}
+[data-testid="stMarkdownContainer"] blockquote {
+  border-right: 4px solid var(--c-teal);
+  border-left: none;
+  padding-right: 1rem;
+  padding-left: 0;
+  margin-right: 0;
+  background: var(--c-cream);
+  border-radius: 8px;
+}
+
+/* Horizontal groups (st.columns, st.container(horizontal=True)) read
+   right-to-left: the FIRST column is the RIGHTMOST one. Wrapping still
+   stacks columns top-to-bottom in declaration order on narrow screens. */
+[data-testid="stHorizontalBlock"] { flex-direction: row-reverse; }
+
+/* ---------------------------------------------------------------------
+   2. Anything technical is LTR and bidi-isolated so it never reorders
+   inside an Arabic sentence:  `batch_size = 32`, X_train.shape, (batch, features)
+   --------------------------------------------------------------------- */
+code, kbd, samp, pre,
+.stCode, [data-testid="stCode"],
+.katex, .katex-display,
+.ltr, .dlia-ltr,
+[data-testid="stDataFrame"], [data-testid="stTable"] .ltr,
+[data-testid="stJson"], .stException,
+.stPlotlyChart, [data-testid="stVegaLiteChart"], [data-testid="stArrowVegaLiteChart"] {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: isolate;
+}
+
+[data-testid="stMarkdownContainer"] code {
+  display: inline-block;           /* keeps the token as one LTR run */
+  font-family: var(--font-code);
+  font-size: 0.9em;
+  padding: 0.05em 0.4em;
+  border-radius: 6px;
+  background: var(--c-cream-2);
+  color: #3B3A36;
+  vertical-align: baseline;
+  line-height: 1.5;
+}
+[data-testid="stMarkdownContainer"] pre code {
+  display: block;
+  padding: 0.9rem 1rem;
+  background: transparent;
+}
+[data-testid="stMarkdownContainer"] pre {
+  background: var(--c-cream-2);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.3rem 0; }
+[data-testid="stMarkdownContainer"] .katex { display: inline-block; font-size: 1.05em; }
+
+/* English phrase inside Arabic text (not code): <span class="en">Learning Rate</span> */
+.en, .dlia-en {
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
+  font-family: var(--font-en);
+  font-weight: 500;
+  color: #3B3A36;
+}
+
+/* ---------------------------------------------------------------------
+   3. Bidirectional tables: each column carries its own direction.
+   --------------------------------------------------------------------- */
+table.dlia-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 0.97rem;
+  background: #fff;
+  direction: rtl;
+}
+.dlia-table-wrap { overflow-x: auto; margin: 0.6rem 0 1rem; }
+table.dlia-table th, table.dlia-table td {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--c-border);
+  vertical-align: top;
+  line-height: 1.7;
+}
+table.dlia-table th {
+  background: var(--c-cream-2);
+  font-weight: 600;
+  white-space: nowrap;
+}
+table.dlia-table tr:last-child td { border-bottom: none; }
+table.dlia-table td.ltr, table.dlia-table th.ltr {
+  direction: ltr; text-align: left; unicode-bidi: isolate; font-family: var(--font-en);
+}
+table.dlia-table td.code {
+  direction: ltr; text-align: left; unicode-bidi: isolate; font-family: var(--font-code); font-size: 0.88rem;
+}
+table.dlia-table td.num { direction: ltr; text-align: center; font-variant-numeric: tabular-nums; }
+table.dlia-table td.rtl, table.dlia-table th.rtl { direction: rtl; text-align: right; }
+
+/* ---------------------------------------------------------------------
+   4. Callouts (spec §53). Icon + label + colour, never colour alone.
+   --------------------------------------------------------------------- */
+.dlia-callout {
+  direction: rtl;
+  text-align: right;
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem 0.85rem 1rem;
+  margin: 0.6rem 0 1rem;
+  border-right: 5px solid var(--accent, var(--c-teal));
+  background: var(--accent-bg, var(--c-cream));
+  box-shadow: var(--shadow-soft);
+  max-width: var(--reading-width);
+}
+.dlia-callout .dlia-callout-title {
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  color: var(--accent, var(--c-teal));
+  display: flex; gap: 0.4rem; align-items: center;
+}
+.dlia-callout p { margin: 0.2rem 0; line-height: 1.85; }
+.dlia-callout code { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+
+.sem-data  { --accent: var(--sem-data);  --accent-bg: var(--sem-data-bg); }
+.sem-param { --accent: var(--sem-param); --accent-bg: var(--sem-param-bg); }
+.sem-hyper { --accent: var(--sem-hyper); --accent-bg: var(--sem-hyper-bg); }
+.sem-loss  { --accent: var(--sem-loss);  --accent-bg: var(--sem-loss-bg); }
+.sem-grad  { --accent: var(--sem-grad);  --accent-bg: var(--sem-grad-bg); }
+.sem-ok    { --accent: var(--sem-ok);    --accent-bg: var(--sem-ok-bg); }
+.sem-warn  { --accent: var(--sem-warn);  --accent-bg: var(--sem-warn-bg); }
+.sem-fail  { --accent: var(--sem-fail);  --accent-bg: var(--sem-fail-bg); }
+.sem-note  { --accent: #7C5CBF; --accent-bg: var(--c-lavender); }
+.sem-math  { --accent: #2F6FB5; --accent-bg: var(--c-sky); }
+.sem-code  { --accent: #1F7A78; --accent-bg: var(--c-mint); }
+
+/* Semantic inline chips: <span class="chip sem-param">Weight</span> */
+.chip {
+  display: inline-block; direction: ltr; unicode-bidi: isolate;
+  padding: 0.05em 0.55em; border-radius: 999px; font-size: 0.85em; font-weight: 600;
+  color: var(--accent, var(--c-teal)); background: var(--accent-bg, var(--c-cream));
+  border: 1px solid color-mix(in srgb, var(--accent, var(--c-teal)) 35%, transparent);
+  font-family: var(--font-en);
+}
+
+/* ---------------------------------------------------------------------
+   5. Cards, hero, breadcrumbs, navigation
+   --------------------------------------------------------------------- */
+.dlia-card {
+  direction: rtl; text-align: right;
+  background: #fff; border: 1px solid var(--c-border); border-radius: var(--radius);
+  padding: 1rem 1.1rem; box-shadow: var(--shadow-soft); margin-bottom: 0.8rem;
+}
+.dlia-card h4 { margin: 0 0 0.4rem; font-size: 1.05rem; }
+.dlia-card p { margin: 0.25rem 0; line-height: 1.8; color: var(--c-text); }
+.dlia-card .muted { color: var(--c-muted); font-size: 0.92rem; }
+
+.dlia-hero {
+  direction: rtl; text-align: right;
+  background: linear-gradient(135deg, #FFF6E5 0%, #E6F1FB 55%, #DDF5EA 100%);
+  border: 1px solid var(--c-border); border-radius: 18px;
+  padding: 1.4rem 1.6rem; margin-bottom: 1rem;
+}
+.dlia-hero h1 { margin: 0 0 0.3rem; font-size: 1.9rem; }
+.dlia-hero .subtitle { font-size: 1.1rem; color: #3B3A36; margin: 0; }
+.dlia-hero .author { margin-top: 0.6rem; font-weight: 600; color: var(--c-teal); }
+.dlia-hero .en { font-weight: 600; }
+
+.dlia-breadcrumb {
+  direction: rtl; text-align: right; font-size: 0.92rem; color: var(--c-muted);
+  display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin-bottom: 0.4rem;
+}
+.dlia-breadcrumb .sep { color: #B9B2A6; }
+.dlia-breadcrumb .current { color: var(--c-text); font-weight: 600; }
+
+.dlia-brand {
+  direction: rtl; text-align: right;
+  background: var(--c-cream); border: 1px solid var(--c-border); border-radius: var(--radius);
+  padding: 0.7rem 0.9rem; margin-bottom: 0.6rem;
+}
+.dlia-brand .t { font-weight: 700; font-size: 1rem; }
+.dlia-brand .s { font-size: 0.82rem; color: var(--c-muted); }
+
+.dlia-footer {
+  direction: rtl; text-align: center; color: var(--c-muted); font-size: 0.85rem;
+  border-top: 1px solid var(--c-border); margin-top: 2rem; padding-top: 0.8rem;
+}
+
+/* Right navigation column: tighter buttons, highlighted current page */
+.dlia-nav .stButton button {
+  justify-content: flex-end; text-align: right; padding: 0.25rem 0.6rem; min-height: 2rem;
+  font-size: 0.93rem; white-space: normal; line-height: 1.5;
+}
+.dlia-nav [data-testid="stExpander"] details { border-radius: 10px; }
+.dlia-nav [data-testid="stExpander"] summary { padding: 0.35rem 0.7rem; font-weight: 600; }
+.dlia-nav .lvl2 .stButton button { padding-right: 1.4rem; font-size: 0.9rem; }
+
+/* Lesson meta strip */
+.dlia-meta { direction: rtl; display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0.2rem 0 0.8rem; }
+.dlia-meta .tag {
+  background: var(--c-cream); border: 1px solid var(--c-border); border-radius: 999px;
+  padding: 0.1rem 0.7rem; font-size: 0.82rem; color: var(--c-muted);
+}
+
+/* Process pipeline (spec §24) */
+.dlia-pipe { direction: ltr; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin: 0.5rem 0 1rem; }
+.dlia-pipe .step {
+  padding: 0.3rem 0.7rem; border-radius: 8px; border: 1px solid var(--c-border);
+  background: #fff; font-family: var(--font-en); font-size: 0.88rem; font-weight: 500;
+}
+.dlia-pipe .step.active { background: var(--c-teal); color: #fff; border-color: var(--c-teal); }
+.dlia-pipe .arrow { color: #B9B2A6; }
+
+/* Equation symbol table */
+.dlia-symbols { direction: rtl; }
+.dlia-symbols .row { display: grid; grid-template-columns: 7rem 1fr; gap: 0.6rem; padding: 0.35rem 0; border-bottom: 1px dashed var(--c-border); }
+.dlia-symbols .sym { direction: ltr; text-align: left; font-family: var(--font-en); }
+
+/* Reduced motion (spec §66) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* Small screens: the right panel collapses into the "القائمة" drawer (spec §6, §67) */
+@media (max-width: 760px) {
+  [data-testid="stColumn"]:has(.st-key-right_nav_panel) { display: none; }
+  .dlia-hero { padding: 1rem 1.1rem; }
+  .dlia-hero h1 { font-size: 1.45rem; }
+  [data-testid="stMarkdownContainer"] p { max-width: 100%; }
+}

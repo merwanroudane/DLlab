@@ -1,0 +1,19 @@
+[project]
+name = "deep-learning-interactive-academy"
+version = "0.1.0"
+description = "Deep Learning Interactive Academy — From Foundations to Deep Neural Networks. Designed for Teaching and Research by Dr. Marwan Roudane."
+requires-python = ">=3.11"
+dependencies = [
+  "streamlit>=1.58",
+  "numpy>=2.0",
+  "pandas>=2.2",
+  "plotly>=5.24",
+  "scikit-learn>=1.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
