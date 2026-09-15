@@ -280,8 +280,13 @@ pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
 
 ### Deploying on Streamlit Community Cloud
 
-1. Point the app at `streamlit_app.py` on the `main` branch.
-2. In **Advanced settings** choose **Python 3.11** (the repository also carries a `.python-version`).
+1. **Create app → Deploy a public app from GitHub**: repository `merwanroudane/DLlab`, branch `main`,
+   main file `streamlit_app.py`.
+2. In **Advanced settings** choose **Python 3.11** (3.12 / 3.13 also work). This must be done in the
+   deploy dialog: Community Cloud ignores `.python-version` and the Python version of an existing app
+   cannot be changed — delete the app and deploy again if it was created with the default (3.14).
+   TensorFlow has no wheels for Python 3.14, so on 3.14 the install fails with
+   `No matching distribution found for tensorflow==2.20.0`.
 3. Deploy — the first build downloads TensorFlow (~620 MB) and CPU PyTorch (~200 MB) and takes a few
    minutes; later reboots reuse the cached environment.
 
