@@ -8,6 +8,8 @@ from components.lesson_layout import h2, lesson_footer, lesson_header
 from components.quiz import Q
 from components.week import post_test
 from core.models import Lesson
+from components.animation_player import Frame, animation_player, caption
+from content.course.w13_gpu._viz import COLAB, colab_svg
 from core.routing import go as goto
 
 LESSON = Lesson(
@@ -52,6 +54,13 @@ def render() -> None:
     lesson_header(LESSON)
     why("Colab يمنحك GPU مجانًا (بحدود) في المتصفح — وهو بيئة تشغيل لا إطار (الوحدة 22). المطلوب ثلاث مهارات: تفعيل GPU والتحقق منه، إدارة الملفات والجلسة، وقراءة OOM ونصائح الأداء.")
     h2("1) خطوات Colab", "1) Colab steps")
+    ccaps = ["**افتح دفترًا**: من صفحة Colab، أو ارفع ملف .ipynb جاهزًا (قالب الأسبوع 14).",
+             "**فعّل GPU**: من قائمة وقت التشغيل اختر نوعه ثم مسرّعًا رسوميًا. التغيير يعيد تشغيل الجلسة: شغّله قبل تحميل أي بيانات.",
+             "**تحقق فورًا**: `!nvidia-smi` وقائمة الأجهزة في TensorFlow. قائمة فارغة = ما زلت على CPU.",
+             "**اربط Drive**: الملفات المرفوعة للجلسة تختفي عند انتهائها؛ Drive يبقى.",
+             "**درّب مع نقاط حفظ**: `ModelCheckpoint` إلى Drive حتى لا يضيع التدريب إذا انقطعت الجلسة.",
+             "**احفظ النموذج النهائي** إلى Drive ونزّله أو شاركه مع التقرير."]
+    animation_player("w13_colab", [Frame(colab_svg(i), caption(c), action=COLAB[i][0]) for i, c in enumerate(ccaps)], title_ar="سير العمل في Colab بست خطوات", interval_ms=2300)
     compare_table(["الخطوة", "أين", "ملاحظة"],
                   [("افتح دفترًا", "colab.research.google.com → New notebook (أو ارفع .ipynb)", "يعمل بحساب Google"), ("فعّل GPU", "Runtime → Change runtime type → Hardware accelerator: **GPU** (T4 مجانًا)", "أعد تشغيل الجلسة بعد التغيير"), ("تحقق", "خلية: `!nvidia-smi` + الكود أدناه", "قبل أي تدريب"),
                    ("البيانات", "`from google.colab import drive; drive.mount('/content/drive')` أو رفع ملف من اللوحة اليسرى", "الملفات المرفوعة تُحذف مع الجلسة؛ Drive يبقى"), ("الحفظ", "`model.save('/content/drive/MyDrive/proj/m.keras')` + `ModelCheckpoint` هناك", "الجلسة المجانية تنتهي بعد خمول أو ~12 ساعة"), ("الحزم", "مثبّتة: tensorflow, keras, torch, sklearn, pandas… `!pip install x` للباقي", "النسخ قد تختلف عن المشروع: اطبعها")],
@@ -67,7 +76,7 @@ def render() -> None:
     h2("3) تشخيص OOM", "3) OOM diagnostics")
     st.code(OOM, language="text")
     compare_table(["ما تقرؤه", "المعنى", "التصرف"],
-                  [("`shape[256,224,224,64]`", "تنشيط دفعة 256 صورة 224×224 بـ 64 قناة = 3.2 مليار قيمة × 4 B ≈ 13 GB", "الدفعة ÷ 4 أو أكثر"), ("`[Op:Conv2D]`", "الطبقة التي طلبت الذاكرة", "الطبقات الأولى (دقة كاملة) هي الأثقل تنشيطًا"), ("`device:GPU:0`", "على البطاقة لا RAM", "لا يفيد تكبير RAM"),
+                  [("`shape[256,224,224,64]`", "تنشيط دفعة 256 صورة 224×224 بـ 64 قناة = 256×224×224×64 ≈ 0.82 مليار قيمة × 4 B ≈ 3.3 GB لهذا الموتر وحده — والطبقات الأخرى وتدرجاتها تضيف أضعافه", "الدفعة ÷ 4 أو أكثر"), ("`[Op:Conv2D]`", "الطبقة التي طلبت الذاكرة", "الطبقات الأولى (دقة كاملة) هي الأثقل تنشيطًا"), ("`device:GPU:0`", "على البطاقة لا RAM", "لا يفيد تكبير RAM"),
                    ("يظهر بعد حقب عدة لا فورًا", "تسرّب: تجميع موترات (loss بلا item/float) أو نماذج متعددة في الذاكرة", "`float(loss)`؛ `keras.backend.clear_session()`؛ أعد التشغيل"), ("يظهر في التقييم فقط", "دفعة التقييم أكبر أو بلا no_grad (PyTorch)", "`batch_size` في evaluate/predict؛ `torch.no_grad()`")],
                   ["code", "rtl", "rtl"])
     debugging_note("ترتيب علاج OOM: (1) الدفعة ÷ 2 حتى يعمل؛ (2) `mixed_float16`؛ (3) صورة/نافذة أصغر؛ (4) شبكة أصغر أو GlobalAveragePooling بدل Flatten؛ (5) تجميع التدرجات على دفعات صغيرة (الوحدة 21) إن أردت دفعة فعلية كبيرة. وبعد OOM أعد تشغيل وقت التشغيل: الذاكرة قد تبقى محجوزة.")

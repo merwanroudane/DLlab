@@ -1,6 +1,13 @@
-from components.quiz import Q
-from components.week import week_overview
+import streamlit as st
+
+from components.animation_player import Frame, animation_player, caption
+from components.callouts import intuition, practical_note, takeaway
+from components.lesson_layout import h2, lesson_footer, lesson_header
+from components.quiz import Q, quiz
+from content.course.w13_gpu._viz import parallel_svg
 from core.models import Lesson
+from core.routing import go
+from core.rtl import pipeline, table
 
 LESSON = Lesson(
     id="course.w13.overview",
@@ -9,20 +16,41 @@ LESSON = Lesson(
     module="course.w13",
     order=1,
     prerequisites=["course.w12.applications", "foundations.frameworks.keras.errors"],
-    objectives_ar=["خريطة الأسبوع.", "اختبار قبلي على GPU والذاكرة."],
-    terms=["batch_size"],
-    difficulty="beginner",
-    summary_ar="CPU مقابل GPU والتوازي ← VRAM وحجم الدفعة ← Colab ووقت التشغيل ← اكتشاف GPU ومعلومات الجهاز ← OOM والأداء.",
+    objectives_ar=["رؤية لماذا يسرّع GPU التعلم العميق في أربع لقطات (تحريك).", "خريطة الأسبوع.", "اختبار قبلي على GPU والذاكرة."],
+    terms=["gpu", "oom", "batch_size"],
+    difficulty="intermediate",
+    summary_ar="CPU مقابل GPU والتوازي ← ذاكرة VRAM وحجم الدفعة ← Colab: التفعيل والتحقق والملفات ← تشخيص OOM والأداء.",
 )
 
 
 def render() -> None:
-    week_overview(
-        LESSON, week_no="13",
-        steps=["CPU vs GPU", "Parallelism", "VRAM & batch size", "Colab runtime", "GPU detection", "OOM diagnostics", "Performance notes", "Post-test"],
-        links=[("CPU مقابل GPU، التوازي، VRAM، الدفعة مقابل الذاكرة", "CPU وGPU والذاكرة", "الأسس 17: الدفعة؛ الأسس 4: ضرب المصفوفات"), ("Colab، وقت التشغيل، الاكتشاف، معلومات الجهاز، OOM، الأداء", "Colab ووقت التشغيل", "الوحدة 21: الأجهزة والأخطاء؛ الوحدة 22: لقطات Colab/GPU")],
-        buttons=[("معمل GPU وذاكرة الدفعة", ":material/science:", "labs.gpu_batch_memory_lab"), ("الوحدة 22 — معرض PyTorch (CPU/GPU)", ":material/photo_library:", "foundations.gallery.pytorch")],
-        pretest=[Q("GPU يسرّع التدريب لأنه…", ["أدق", "ينفذ آلاف عمليات الضرب بالتوازي", "يملك ذاكرة أكبر"], 1, ""), Q("`ResourceExhaustedError: OOM`:", ["خطأ في الكود", "ذاكرة GPU امتلأت: قلّل الدفعة", "GPU غير موجود"], 1, ""),
-                 Q("GPU يغيّر…", ["الدقة النهائية", "السرعة (وأحيانًا الكسور العشرية)", "الخسارة"], 1, ""), Q("في Colab، لتفعيل GPU:", ["pip install gpu", "Runtime → Change runtime type → GPU", "يُفعَّل تلقائيًا"], 1, "")],
-        note_ar="على هذه الآلة لا GPU؛ الأمثلة تعمل على CPU والقياسات تُظهر الحدس. في Colab شغّل نفس الملفات بلا تعديل.",
-        takeaway_ar="الأسبوع 13 = لماذا GPU (توازٍ)، حدوده (VRAM)، وكيف تحصل عليه وتشخّصه في Colab.")
+    lesson_header(LESSON)
+    h2("ماذا سنفعل هذا الأسبوع؟", "This week")
+    pipeline(["CPU vs GPU", "Parallelism", "VRAM & batch size", "Colab runtime", "Detect GPU", "OOM & performance", "Post-test"], active=0)
+    h2("التوازي في أربع لقطات", "Parallelism in four snapshots")
+    shown = [0, 1, 8, 16]
+    caps = ["64 خلية مستقلة في ناتج ضرب مصفوفتين.", "بعد دفعة واحدة: CPU (4 أنوية) أنهى 4، وGPU أنهى 64.", "CPU في منتصف الطريق.", "CPU ينتهي بعد 16 دفعة. الأسبوع كله يشرح ما يترتب على هذا الفرق."]
+    animation_player("w13_teaser", [Frame(parallel_svg(t), caption(c), action=f"tick {t}") for t, c in zip(shown, caps)], title_ar="نفس العمل، سرعتان", interval_ms=1800)
+    table(["الموضوع", "درس الأسبوع", "الأسس التي يعتمد عليها"],
+          [("لماذا GPU أسرع، VRAM، حجم الدفعة", "CPU/GPU والذاكرة", "الأسبوع 04: ضرب المصفوفات؛ الأسبوع 05: الدفعة وη"), ("Colab: التفعيل والتحقق والملفات والحفظ", "Colab", "الوحدة 22: البيئات"), ("OOM والأداء", "Colab", "الأسبوع 09: أشكال CNN")],
+          ["rtl", "rtl", "rtl"])
+    st.markdown(
+        "**في نهاية الأسبوع ستستطيع:**\n"
+        "- أن تشرح لماذا يسرّع GPU ضرب المصفوفات والالتفاف.\n"
+        "- أن تقدّر ذاكرة خطوة تدريب وتختار دفعة تتسع.\n"
+        "- أن تشغّل مشروعك في Colab على GPU وتتحقق منه وتحفظ عملك.\n"
+        "- أن تقرأ رسالة OOM وتعالجها بالترتيب الصحيح."
+    )
+    practical_note("كل ما في المقرر عمل على CPU عمدًا ببيانات صغيرة. هذا الأسبوع يجهزك لمشروع أكبر دون تغيير في المنهج.")
+    with st.container(horizontal=True):
+        st.button("معمل GPU وذاكرة الدفعة", icon=":material/science:", on_click=go, args=("labs.gpu_batch_memory_lab",), key="w13_go_lab")
+    intuition("GPU لا يغيّر الرياضيات ولا الدقة؛ يغيّر الزمن فقط. إن تغيّرت نتائجك كثيرًا عند الانتقال إلى GPU فقد تغيّر شيء آخر (الدفعة، η، البذرة).")
+    h2("الاختبار القبلي", "Pre-test")
+    quiz("course.w13.pretest", [
+        Q("لماذا يسرّع GPU ضرب المصفوفات؟", ["أنويته أسرع", "آلاف الأنوية تحسب خلايا مستقلة معًا", "ذاكرته أكبر"], 1, ""),
+        Q("الجزء من ذاكرة التدريب الذي ينمو مع الدفعة:", ["المعلمات", "حالة Adam", "التنشيطات"], 2, ""),
+        Q("OOM: أول مقبض", ["η", "batch_size ÷ 2", "الحقب"], 1, ""),
+        Q("في Colab، الملفات المرفوعة للجلسة…", ["تبقى دائمًا", "تُحذف عند انتهاء الجلسة", "تُرفع إلى Drive تلقائيًا"], 1, ""),
+    ], title_ar="الاختبار القبلي — الأسبوع 13")
+    takeaway("الأسبوع 13 = التوازي يفسّر السرعة، الذاكرة تحدد الدفعة، وColab يعطيك GPU إن أحسنت إدارة الجلسة.")
+    lesson_footer(LESSON, ["التوازي في أربع لقطات (تحريك).", "خريطة الأسبوع.", "الاختبار القبلي."])
