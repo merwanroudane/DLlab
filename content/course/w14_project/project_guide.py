@@ -5,6 +5,8 @@ from components.comparison import compare_table
 from components.lesson_layout import h2, lesson_footer, lesson_header
 from components.quiz import Q, quiz
 from core.models import Lesson
+from components.animation_player import Frame, animation_player, caption
+from content.course.w14_project._viz import phase_of, roadmap_svg
 from core.routing import go as goto
 from core.rtl import pipeline
 
@@ -48,6 +50,15 @@ def render() -> None:
     pipeline([s[0].split(". ")[1] for s in STAGES[:6]], active=0)
     pipeline([s[0].split(". ")[1] for s in STAGES[6:12]], active=None)
     pipeline([s[0].split(". ")[1] for s in STAGES[12:]], active=None)
+    h2("خريطة الطريق: 17 محطة في أربع مراحل", "The roadmap: 17 stops in four phases")
+    phase_ar = {"Plan": "التخطيط", "Build": "البناء", "Diagnose": "التشخيص", "Report": "التقرير"}
+    rcaps = []
+    for i, (name, what, ref, mistake) in enumerate(STAGES):
+        ph, _ = phase_of(i)
+        rcaps.append(f"**{name}** (مرحلة {phase_ar[ph]}): {what} — **الخطأ الشائع**: {mistake}.")
+    animation_player("w14_roadmap", [Frame(roadmap_svg(STAGES, i), caption(c), action=STAGES[i][0].split('. ', 1)[1]) for i, c in enumerate(rcaps)],
+                     title_ar="المشروع من السؤال إلى العرض", stages=["التخطيط 1–6", "البناء 7–10", "التشخيص 11–13", "التقرير 14–17"], interval_ms=2600)
+    st.caption("لاحظ: النموذج نفسه (المرحلة 8) يأتي بعد سبع مراحل من التفكير في البيانات والتقسيم وخط الأساس.")
     h2("اختيار نوع المشروع", "Choosing the project type")
     compare_table(["بياناتك", "المسألة النموذجية", "البنية", "خط الأساس", "الأسابيع المرجعية", "حجم كافٍ"],
                   [("جدول (عملاء، شركات، عقارات)", "تصنيف تعثر/مغادرة، تنبؤ سعر/طلب", "MLP صغير", "لوجستي/خطي، أشجار", "02–07", "بضع مئات صف"), ("صور (منتجات، رسوم بيانية، مستندات)", "تصنيف صور", "CNN صغيرة (+ زيادة بيانات)", "الأغلبية؛ لوجستي على البكسلات", "08–09", "بضع مئات صورة لكل فئة"),

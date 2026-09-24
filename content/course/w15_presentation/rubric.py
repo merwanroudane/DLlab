@@ -7,6 +7,7 @@ from components.quiz import Q
 from components.week import post_test
 from core.models import Lesson
 from core.routing import go as goto
+import plotly.graph_objects as go_fig
 from core.rtl import table
 
 LESSON = Lesson(
@@ -45,6 +46,11 @@ def render() -> None:
     rows = [(name, str(w), lv[0], lv[1], lv[2], lv[3]) for name, w, lv in RUBRIC]
     table(["البند", "الوزن", "0", "1", "2", "3"], rows, ["rtl", "num", "rtl", "rtl", "rtl", "rtl"])
     st.caption("الدرجة = Σ (المستوى/3 × الوزن) من 100. المستوى 3 هو ما وصفه الأسبوع 14 كاملًا.")
+    fw = go_fig.Figure(go_fig.Bar(x=[w for _, w, _ in RUBRIC], y=[n for n, _, _ in RUBRIC], orientation="h",
+                                  marker_color=["#7C3AED", "#2563EB", "#0891B2", "#059669", "#D97706", "#EA580C", "#DB2777", "#7C3AED", "#2563EB", "#0891B2", "#059669", "#D97706"][: len(RUBRIC)],
+                                  text=[f"{w}" for _, w, _ in RUBRIC], textposition="outside"))
+    fw.update_layout(height=380, margin=dict(l=10, r=30, t=30, b=10), title="rubric weights (points out of 100)", yaxis=dict(autorange="reversed"), xaxis_title="points")
+    st.plotly_chart(fw, width="stretch", key="w15_weights")
     h2("التقييم الذاتي", "Self-assessment")
     st.session_state.setdefault("w15_self", {})
     total = 0.0; weak = []
@@ -59,6 +65,14 @@ def render() -> None:
         if level <= 1:
             weak.append((name, w, lv[level + 1] if level < 3 else ""))
     st.progress(total / 100, text=f"الدرجة التقديرية: {total:.0f} / 100")
+    names = [n for n, _, _ in RUBRIC]
+    levels = [st.session_state["w15_self"].get(n, 0) for n in names]
+    fr = go_fig.Figure()
+    fr.add_trace(go_fig.Scatterpolar(r=[3] * len(names) + [3], theta=names + [names[0]], fill="toself", name="level 3 (target)", line=dict(color="#C4B5FD"), fillcolor="rgba(196,181,253,0.15)"))
+    fr.add_trace(go_fig.Scatterpolar(r=levels + [levels[0]], theta=names + [names[0]], fill="toself", name="your self-assessment", line=dict(color="#DB2777", width=3), fillcolor="rgba(219,39,119,0.25)"))
+    fr.update_layout(height=460, margin=dict(l=40, r=40, t=40, b=20), polar=dict(radialaxis=dict(range=[0, 3], tickvals=[0, 1, 2, 3])), legend=dict(orientation="h", x=0, y=1.1))
+    st.plotly_chart(fr, width="stretch", key="w15_radar")
+    st.caption("المخطط الراداري يتحدّث مع كل منزلقة: الفجوات بين الوردي والبنفسجي هي خطة عملك قبل التسليم.")
     if weak:
         st.markdown("**البنود التي تستحق العمل أولًا (مرتبة بالوزن):**")
         for name, w, nxt in sorted(weak, key=lambda t: -t[1]):

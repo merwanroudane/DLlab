@@ -5,6 +5,8 @@ from components.comparison import compare_table
 from components.lesson_layout import h2, lesson_footer, lesson_header
 from components.quiz import Q, quiz
 from core.models import Lesson
+from components.animation_player import Frame, animation_player, caption
+from content.course.w14_project._viz import slide_svg
 from core.routing import go as goto
 
 LESSON = Lesson(
@@ -51,6 +53,8 @@ def render() -> None:
     lesson_header(LESSON)
     why("العرض الجيد ليس أجمل شرائح بل **أقصر طريق للأدلة**: المقيّم يريد أن يرى في دقيقتين خط الأساس والفجوة والاختبار مرة واحدة. والمناقشة الجيدة ليست دفاعًا بل استكشاف مشترك لنقاط الضعف — ومن يذكرها أولًا يكسب.")
     h2("هيكل العرض: 10 شرائح", "The presentation: 10 slides")
+    animation_player("w15_story", [Frame(slide_svg(SLIDES, i), caption(f"**{name}** — {content} **الشكل**: {form}."), action=f"slide {i + 1}") for i, (name, content, form) in enumerate(SLIDES)],
+                     title_ar="العرض كقصة من عشر لقطات (دقيقة لكل شريحة)", interval_ms=2400)
     compare_table(["الشريحة", "المحتوى", "الشكل"], SLIDES, ["rtl", "rtl", "rtl"])
     practical_note("قاعدة الدقيقة: كل شريحة دقيقة واحدة (10 دقائق) + 5 للمناقشة. الأرقام دائمًا بوحدة الهدف ومقابل خط الأساس. لا تعرض الكود؛ اعرض المخرجات وارفق الدفتر.")
     h2("تحليل النتائج ونقاط الضعف", "Results analysis & weaknesses")
