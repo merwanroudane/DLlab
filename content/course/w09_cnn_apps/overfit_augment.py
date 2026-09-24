@@ -2,11 +2,13 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-from components.callouts import common_mistake, intuition, research_note, takeaway, why
+from components.animation_player import Frame, animation_player, caption
+from components.callouts import common_mistake, intuition, research_note, takeaway, warning_note, why
 from components.comparison import compare_table
 from components.lesson_layout import h2, lesson_footer, lesson_header
 from components.quiz import Q, quiz
 from core.models import Lesson
+from content.course.w09_cnn_apps._viz import aug_examples, aug_svg
 from core.routing import go as goto
 from core.rtl import table
 from labs.fw import cnn_shapes_run
@@ -18,8 +20,8 @@ LESSON = Lesson(
     module="course.w09",
     order=3,
     prerequisites=["course.w09.build_train", "foundations.regularization.augmentation_simplification", "foundations.regularization.dropout"],
-    objectives_ar=["إحداث فرط تخصيص بتقليل بيانات التدريب إلى 60 صورة وقراءته من المنحنيات.", "علاجه بزيادة البيانات (إزاحة/قلب) وبـ Dropout، ومقارنة الثلاثة على الاختبار.", "قواعد اختيار تحويلات الزيادة المناسبة للمسألة."],
-    terms=["hyperparameter"],
+    objectives_ar=["إحداث فرط تخصيص بتقليل بيانات التدريب إلى 60 صورة وقراءته من المنحنيات.", "علاجه بزيادة البيانات (إزاحة/قلب) وبـ Dropout، ومقارنة الثلاثة على الاختبار.", "قواعد اختيار تحويلات الزيادة المناسبة للمسألة، ورؤية تحويل يحفظ الوسم وآخر يكسره (تحريك)."],
+    terms=["hyperparameter", "data_augmentation", "overfitting", "dropout", "regularization"],
     labs=["labs.overfitting_lab", "labs.dropout_lab"],
     difficulty="intermediate",
     summary_ar="بيانات قليلة + CNN = حفظ: train 1.0 وval أقل بكثير. زيادة البيانات (layers.RandomTranslation/RandomFlip داخل النموذج، على التدريب فقط) تخلق تنوعًا حقيقيًا وترفع الاختبار. Dropout يساعد أقل هنا. التحويلات يجب أن تحفظ الفئة.",
@@ -44,12 +46,12 @@ def render() -> None:
     epochs = st.slider("epochs", 10, 40, 20, 5, key="w09_of_ep")
     runs = {"بلا علاج": cnn_shapes_run(epochs=int(epochs), augment=False, n_train=60), "زيادة بيانات": cnn_shapes_run(epochs=int(epochs), augment=True, n_train=60), "Dropout 0.5": cnn_shapes_run(epochs=int(epochs), augment=False, n_train=60, dropout=0.5)}
     fig = go.Figure(); rows = []
-    for (name, r), color in zip(runs.items(), ("#C8473A", "#1F7A78", "#7C5CBF")):
+    for (name, r), color in zip(runs.items(), ("#DB2777", "#059669", "#7C3AED")):
         e = np.arange(1, len(r["history"]["loss"]) + 1)
         fig.add_trace(go.Scatter(x=e, y=r["history"]["loss"], name=f"{name} — loss", line=dict(color=color, width=1.5, dash="dot")))
         fig.add_trace(go.Scatter(x=e, y=r["history"]["val_loss"], name=f"{name} — val_loss", line=dict(color=color, width=3)))
         rows.append((name, f"{r['train_acc']:.3f}", f"{r['val_acc']:.3f}", f"{r['test_acc']:.3f}", f"{r['train_acc'] - r['test_acc']:+.3f}"))
-    fig.update_layout(height=340, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="epoch", yaxis_title="loss", plot_bgcolor="#FFFDF9", paper_bgcolor="#FFFDF9", legend=dict(orientation="h"))
+    fig.update_layout(height=340, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="epoch", yaxis_title="loss", legend=dict(orientation="h"))
     st.plotly_chart(fig, width="stretch", key="w09_of_fig")
     table(["الإعداد", "train acc", "val acc", "test acc", "الفجوة train−test"], rows, ["rtl", "num", "num", "num", "num"])
     with st.expander("كيف أقرأ؟", expanded=True, icon=":material/visibility:"):
@@ -60,6 +62,17 @@ def render() -> None:
 - غيّر الحقب: الزيادة تحتاج حقبًا أكثر لتتفوق (كل حقبة ترى بيانات «جديدة»).
 """)
     h2("زيادة البيانات في Keras", "Augmentation in Keras")
+    ex = aug_examples()
+    acaps = ["**الأصل**: شريط أفقي من بيانات المنصة. وسمه: horizontal bar.",
+             "**إزاحة لأسفل بكسلين** (ما تفعله `RandomTranslation`): نفس الشريط في مكان آخر — الوسم لم يتغير، والنموذج يتعلم ألا يعتمد على الموضع.",
+             "**إزاحة لأعلى ولليمين**: الأطراف التي خرجت من الإطار تُملأ بأصفار (`fill_mode='constant'`).",
+             "**قلب يمين-يسار**: الشريط الأفقي يبقى أفقيًا ✓.",
+             "**قلب أعلى-أسفل**: يبقى أفقيًا ✓ — لذلك `RandomFlip('horizontal_and_vertical')` آمن لهذه المسألة تحديدًا.",
+             "**ضوضاء إضافية**: نفس الشكل بتشويش أكبر — يعلّم النموذج تجاهل البكسلات العشوائية.",
+             "**تدوير 90°**: الشريط الأفقي صار **عموديًا**! لو أبقينا الوسم «أفقي» لعلّمنا النموذج أن يخطئ. لهذا لا نضيف `RandomRotation` كبيرًا هنا: التحويل يجب أن يحفظ الوسم."]
+    animation_player("w09_aug", [Frame(aug_svg(ex, i), caption(c), action=ex[i]["name"]) for i, c in enumerate(acaps)],
+                     title_ar="تحويلات تحفظ الوسم… وواحد يكسره", interval_ms=2000)
+    warning_note("الزيادة ليست «مجانية»: كل تحويل فرضية عن المسألة («الموضع لا يهم»، «الاتجاه لا يهم»). فرضية خاطئة = بيانات موسومة خطأً بكميات كبيرة.")
     st.code(CODE, language="python")
     compare_table(["التحويل", "الطبقة", "يحفظ الفئة في…", "يكسرها في…"],
                   [("إزاحة", "`RandomTranslation(0.1, 0.1)`", "معظم الصور", "صور حيث الموضع هو الهدف"), ("قلب أفقي", "`RandomFlip('horizontal')`", "أشياء متماثلة (وجوه، منتجات)", "أرقام/حروف/نصوص، إشارات مرور"), ("قلب عمودي", "`RandomFlip('vertical')`", "أنماط مجردة، صور جوية", "معظم الصور الطبيعية"),
@@ -76,6 +89,7 @@ def render() -> None:
         Q("لماذا loss التدريب أعلى مع الزيادة؟", ["النموذج أسوأ", "الصور تتغير كل حقبة فلا تُحفظ", "η أصغر"], 1, ""),
         Q("قلب عمودي لصورة رسم بياني لسعر:", ["زيادة مناسبة", "يكسر الفئة (صعود ↔ هبوط)", "لا أثر"], 1, ""),
         Q("طبقات الزيادة في Keras أثناء predict…", ["تعمل", "معطّلة تلقائيًا", "تحتاج إزالة"], 1, ""),
+        Q("تدوير 90° لصورة شريط أفقي في هذه المسألة:", ["زيادة جيدة", "يكسر الوسم (يصبح عموديًا)", "لا أثر"], 1, ""),
     ])
     takeaway("بيانات قليلة + CNN = حفظ. الزيادة تخلق تنوعًا حقيقيًا (على التدريب فقط، كطبقات) وتحتاج حقبًا أكثر؛ Dropout مساعد. اختر تحويلات تحفظ الفئة.")
     lesson_footer(LESSON, ["تجربة ثلاثية حية.", "طبقات الزيادة وجدول التحويلات.", "قاعدة «نفس الوسم»."])

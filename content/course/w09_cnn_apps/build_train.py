@@ -2,11 +2,13 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-from components.callouts import common_mistake, intuition, practical_note, takeaway, why
+from components.animation_player import Frame, animation_player, caption
+from components.callouts import common_mistake, intuition, practical_note, takeaway, warning_note, why
 from components.comparison import compare_table
 from components.lesson_layout import h2, lesson_footer, lesson_header
 from components.quiz import Q, quiz
 from core.models import Lesson
+from content.course.w09_cnn_apps._viz import layer_trace, trace_svg
 from core.routing import go as goto
 from core.rtl import table
 from labs.cnn import shapes_dataset
@@ -19,8 +21,8 @@ LESSON = Lesson(
     module="course.w09",
     order=2,
     prerequisites=["course.w09.overview", "course.w08.layers_shapes", "course.w03.first_network"],
-    objectives_ar=["تجهيز الصور: تحجيم 0–1، بُعد القناة، الدفعة، الهدف كأعداد صحيحة.", "بناء CNN صغيرة بالأسئلة الأحد عشر، تدريبها وقراءة summary والسجل.", "التقييم: دقة الاختبار ومصفوفة التباس لثلاث فئات."],
-    terms=["tensor", "cross_entropy", "batch_size"],
+    objectives_ar=["تجهيز الصور: تحجيم 0–1، بُعد القناة، الدفعة، الهدف كأعداد صحيحة.", "بناء CNN صغيرة بالأسئلة الأحد عشر، تدريبها وقراءة summary والسجل.", "التقييم: دقة الاختبار ومصفوفة التباس لثلاث فئات.", "متابعة صورة واحدة داخل الشبكة المدرَّبة طبقةً طبقة حتى الاحتمالات (تحريك)."],
+    terms=["tensor", "cross_entropy", "batch_size", "cnn", "feature_map", "softmax", "confusion_matrix"],
     labs=["labs.cnn_shape_calculator", "labs.confusion_matrix_lab"],
     difficulty="intermediate",
     summary_ar="X (n, 16, 16, 1) في [0,1]، y أعداد صحيحة 0..2. CNN: [Conv 8 → Pool → Conv 16 → Pool] → Flatten → Dense 32 → Dense 3 softmax، sparse_categorical_crossentropy، Adam. التقييم بمصفوفة التباس.",
@@ -54,7 +56,7 @@ def render() -> None:
     for c, i in zip(cols, range(8)):
         with c:
             fig = go.Figure(go.Heatmap(z=X[i, ::-1, :, 0], colorscale="Greys", showscale=False))
-            fig.update_layout(height=110, margin=dict(l=0, r=0, t=16, b=0), title=dict(text=["h-bar", "v-bar", "cross"][y[i]], font=dict(size=10), x=0.5), xaxis=dict(visible=False), yaxis=dict(visible=False, scaleanchor="x"), paper_bgcolor="#FFFDF9")
+            fig.update_layout(height=110, margin=dict(l=0, r=0, t=16, b=0), title=dict(text=["h-bar", "v-bar", "cross"][y[i]], font=dict(size=10), x=0.5), xaxis=dict(visible=False), yaxis=dict(visible=False, scaleanchor="x"))
             st.plotly_chart(fig, width="stretch", key=f"w09_s{i}")
     compare_table(["الخطوة", "لماذا", "الكود"],
                   [("القيم إلى [0, 1]", "الشبكة تتدرب على مقاييس صغيرة (الأسس 8)؛ الصور الحقيقية 0–255", "`X = X.astype('float32') / 255`"), ("بُعد القناة", "Conv2D يتوقع (H, W, C) حتى للرمادي", "`X = X[..., None]` → (n, 16, 16, 1)"), ("الدفعة", "رتبة 4 (B, H, W, C)", "تلقائي في fit"),
@@ -76,15 +78,30 @@ def render() -> None:
     c1, c2 = st.columns(2)
     with c1:
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=e, y=h_["loss"], name="loss", line=dict(color="#2F6FB5", width=2)))
-        fig.add_trace(go.Scatter(x=e, y=h_["val_loss"], name="val_loss", line=dict(color="#C8473A", width=3)))
-        fig.update_layout(height=280, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="epoch", plot_bgcolor="#FFFDF9", paper_bgcolor="#FFFDF9", legend=dict(orientation="h"))
+        fig.add_trace(go.Scatter(x=e, y=h_["loss"], name="loss", line=dict(color="#2563EB", width=2)))
+        fig.add_trace(go.Scatter(x=e, y=h_["val_loss"], name="val_loss", line=dict(color="#DB2777", width=3)))
+        fig.update_layout(height=280, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="epoch", legend=dict(orientation="h"))
         st.plotly_chart(fig, width="stretch", key="w09_loss")
     with c2:
         cm = r["cm"]
         table(["حقيقي \\ متنبأ"] + r["classes"], [(r["classes"][i],) + tuple(str(v) for v in row) for i, row in enumerate(cm)], ["rtl", "num", "num", "num"])
         st.markdown(f"**test accuracy = {r['test_acc']:.3f}** · test loss = {r['test_loss']:.3f} · المعلمات {r['n_params']:,}")
     intuition("المسألة سهلة عمدًا: الدقة تقترب من 1 في حقب قليلة، ومصفوفة التباس قطرية. المهم هنا **المنهج والأشكال**؛ الدرس التالي يجعل المسألة صعبة (بيانات قليلة) لنرى فرط التخصيص وعلاجه.")
+    h2("داخل الشبكة المدرَّبة: صورة واحدة طبقةً طبقة", "Inside the trained network: one image, layer by layer")
+    tr = layer_trace(0)
+    if tr and "conv1" in tr:
+        cls = ["شريط أفقي", "شريط عمودي", "صليب"][tr["true"]]
+        tcaps = [f"**المدخل**: صورة اختبار 16×16 من فئة **{cls}** لم يرها النموذج أثناء التدريب (دقة الاختبار الكلية {tr['acc']:.3f}).",
+                 "**conv1 (8 خرائط 16×16)**: كل نواة متعلَّمة تضيء حيث تجد نمطها: بعضها على الخطوط الأفقية، بعضها على العمودية، بعضها على الحواف. الخرائط القاتمة = نواة لم تجد نمطها هنا.",
+                 "**pool1 (8 خرائط 8×8)**: التجميع يحفظ أقوى الاستجابات ويختصر المكان إلى النصف — «يوجد خط أفقي في هذه المنطقة».",
+                 "**conv2 (16 خريطة 8×8)**: كواشف من الدرجة الثانية تجمع خرائط conv1: بعضها يستجيب للتقاطعات (أفقي + عمودي معًا) — بالضبط ما يميّز الصليب.",
+                 "**pool2 (16 خريطة 4×4)**: ملخص خشن جدًا: 256 رقمًا تصف «ما الأنماط الموجودة وأين تقريبًا». Flatten يحوّلها إلى متجه.",
+                 "**dense (32)**: الرأس الكثيف يقرأ المتجه ويبني تمثيلًا مجردًا — لم يعد مكانيًا.",
+                 f"**softmax**: احتمالات الفئات الثلاث — {', '.join(f'{n}: {p:.3f}' for n, p in zip(['h-bar', 'v-bar', 'cross'], tr['probs']))}. الفئة الصحيحة (أخضر) تأخذ شبه كل الاحتمال."]
+        animation_player("w09_trace", [Frame(trace_svg(tr, i), caption(c), action=["input", "conv1", "pool1", "conv2", "pool2", "dense", "softmax"][i]) for i, c in enumerate(tcaps)],
+                         title_ar="المسار الكامل لصورة داخل CNN مدرَّبة", interval_ms=2400)
+    else:
+        warning_note(f"TensorFlow غير متاح هنا ({(tr or {}).get('error', '')}).")
     with st.container(horizontal=True):
         st.button("حاسبة الأشكال لهذه الشبكة", icon=":material/science:", on_click=goto, args=("labs.cnn_shape_calculator",), key="w09_lab_calc")
         st.button("المكافئ في PyTorch (nn.Conv2d)", icon=":material/swap_horiz:", on_click=goto, args=("foundations.frameworks.concept_mapping",), key="w09_go_pt")
@@ -94,6 +111,7 @@ def render() -> None:
         Q("Dense(32) بعد Flatten لـ 4×4×16: المعلمات", ["256", "8,224", "512"], 1, "256×32+32."),
         Q("الخسارة لثلاث فئات بأعداد صحيحة:", ["binary_crossentropy", "sparse_categorical_crossentropy", "mse"], 1, ""),
         Q("مصفوفة التباس القطرية تعني…", ["أخطاء كثيرة", "تصنيفًا صحيحًا لكل الفئات", "فرط تخصيص"], 1, ""),
+        Q("خرائط conv2 مقارنة بـ conv1…", ["نفس الأنماط", "تجمع أنماط conv1 في أنماط أعقد (تقاطعات)", "صور أصلية"], 1, ""),
     ])
     takeaway("صور → [0,1] + قناة + دفعة؛ y أعداد صحيحة. CNN صغيرة بأسئلتها الأحد عشر. summary قبل fit، مصفوفة التباس بعد evaluate.")
-    lesson_footer(LESSON, ["المعالجة المسبقة كجدول.", "البنية والأسئلة.", "التدريب والتقييم الحيان."])
+    lesson_footer(LESSON, ["المعالجة المسبقة كجدول.", "البنية والأسئلة.", "التدريب والتقييم الحيان.", "صورة داخل الشبكة طبقةً طبقة (تحريك)."])

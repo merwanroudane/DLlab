@@ -2,12 +2,14 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-from components.callouts import common_mistake, debugging_note, intuition, takeaway, why
+from components.animation_player import Frame, animation_player, caption
+from components.callouts import common_mistake, debugging_note, interpretation_note, intuition, takeaway, warning_note, why
 from components.comparison import compare_table
-from components.lesson_layout import h2, lesson_footer, lesson_header
+from components.lesson_layout import h2, h3, lesson_footer, lesson_header
 from components.quiz import Q
 from components.week import post_test
 from core.models import Lesson
+from content.course.w09_cnn_apps._viz import occl_svg, occlusion
 from core.routing import go as goto
 from labs.fw import cnn_shapes_run
 
@@ -18,8 +20,8 @@ LESSON = Lesson(
     module="course.w09",
     order=4,
     prerequisites=["course.w09.overfit_augment", "course.w08.convolution", "foundations.frameworks.keras.errors"],
-    objectives_ar=["استخراج خرائط خصائص الطبقة الأولى لصورة ورؤية النوى المتعلَّمة.", "تحليل الصور المصنَّفة خطأً.", "أخطاء الأشكال الخمسة في CNN برسائلها وحلولها، والاختبار البعدي."],
-    terms=["shape", "channel_dimension"],
+    objectives_ar=["استخراج خرائط خصائص الطبقة الأولى لصورة ورؤية النوى المتعلَّمة.", "تحليل الصور المصنَّفة خطأً، وحساسية الإخفاء `occlusion`: أين ينظر النموذج؟ (تحريك)", "أخطاء الأشكال الخمسة في CNN برسائلها وحلولها، والاختبار البعدي."],
+    terms=["shape", "channel_dimension", "feature_map", "kernel", "cnn"],
     labs=["labs.cnn_shape_calculator"],
     difficulty="intermediate",
     summary_ar="keras.Model(model.inputs, layer.output) يعطي خرائط الخصائص؛ conv.kernel النوى (k, k, C_in, filters). أخطاء الأشكال: ndim=3 (قناة/دفعة مفقودة)، قنوات لا تطابق، Flatten ضخم، صورة أصغر من الشبكة، ترتيب القنوات.",
@@ -33,7 +35,7 @@ kernels = model.get_layer("conv1").kernel.numpy()                         # (3, 
 
 def _heat(z, title, key, cs="Greys", h=130):
     fig = go.Figure(go.Heatmap(z=np.array(z)[::-1], colorscale=cs, showscale=False, zmid=0 if cs != "Greys" else None))
-    fig.update_layout(height=h, margin=dict(l=0, r=0, t=16, b=0), title=dict(text=title, font=dict(size=10), x=0.5), xaxis=dict(visible=False), yaxis=dict(visible=False, scaleanchor="x"), paper_bgcolor="#FFFDF9")
+    fig.update_layout(height=h, margin=dict(l=0, r=0, t=16, b=0), title=dict(text=title, font=dict(size=10), x=0.5), xaxis=dict(visible=False), yaxis=dict(visible=False, scaleanchor="x"))
     st.plotly_chart(fig, width="stretch", key=key)
 
 
@@ -49,7 +51,7 @@ def render() -> None:
         _heat(r["image"], "input", "w09_fm_in")
     for i, (c, k) in enumerate(zip(cks, r["kernels"])):
         with c:
-            _heat(k, f"kernel {i}", f"w09_k{i}", cs=[[0, "#2F6FB5"], [0.5, "#FFFDF9"], [1, "#C8473A"]], h=90)
+            _heat(k, f"kernel {i}", f"w09_k{i}", cs=[[0, "#2563EB"], [0.5, "#FFFDF9"], [1, "#DB2777"]], h=90)
     cols = st.columns(9)
     with cols[0]:
         st.caption("خرائط الخصائص →")
@@ -68,6 +70,22 @@ def render() -> None:
         st.markdown("**أنماط شائعة**: الصلبان الرفيعة تُقرأ شريطًا واحدًا (الخط الثاني ضاع في الضوضاء/التجميع)؛ الأشرطة قرب الحافة تعاني من الحشو؛ الثقة العالية في خطأ = النموذج واثق وخاطئ (مادة للزيادة أو لبيانات من تلك الحالة).")
     else:
         st.success("نموذج الـ60 صورة صنّف كل الاختبار صحيحًا في هذا التشغيل؛ زد الضوضاء أو قلّل الحقب لرؤية أخطاء.", icon="✅")
+    h3("أين ينظر النموذج؟ حساسية الإخفاء", "Where does the model look? Occlusion sensitivity")
+    oc = occlusion(0)
+    if oc and "heat" in oc:
+        n = len(oc["pos"])
+        ocaps = []
+        for k in range(n):
+            r, q = oc["pos"][k]
+            drop = oc["base"] - oc["p"][k]
+            ocaps.append(f"**رقعة فارغة 4×4 عند ({r}, {q})**: احتمال الفئة الصحيحة {oc['p'][k]:.3f} (بدونها {oc['base']:.3f}) — انخفاض {drop:+.3f}."
+                         + (" **انخفاض كبير**: هذه المنطقة حاسمة لقرار النموذج." if drop > 0.1 else ""))
+        ocaps[-1] += " **الخريطة الكاملة**: المناطق الوردية/البنفسجية هي التي يعتمد عليها النموذج."
+        animation_player("w09_occl", [Frame(occl_svg(oc, k), caption(c), action=f"patch {k + 1}/{n}") for k, c in enumerate(ocaps)],
+                         title_ar="نغطي جزءًا من الصورة ونقيس كم يتغير القرار", interval_ms=380)
+        interpretation_note("في هذه الصورة (صليب) الاحتمال لا يهبط إلا عند تغطية **منطقة التقاطع**: إخفاء جزء من شريط واحد لا يغيّر القرار لأن الشريطين ما زالا مرئيين، أما إخفاء التقاطع فيجعل الصورة تبدو كشريطين منفصلين. "
+                            "هذا تفسير **لنموذج مدرَّب** على هذه البيانات، لا حقيقة عن الصلبان.")
+        warning_note("حساسية الإخفاء مكلفة (تنبؤ لكل موضع) وتعتمد على حجم الرقعة ولون التعبئة. استعملها للتشخيص («هل ينظر النموذج إلى الشيء الصحيح أم إلى علامة مائية في الزاوية؟») لا كدليل سببي.")
     h2("3) أخطاء الأشكال في CNN", "3) CNN shape errors")
     compare_table(["الرسالة", "السبب", "الحل"],
                   [("`Input 0 of layer 'conv2d' is incompatible: expected min_ndim=4, found ndim=3`", "غاب بُعد القناة أو الدفعة: (600, 16, 16) أو (16, 16, 1)", "`X[..., None]` للقناة؛ `x[None, ...]` لصورة واحدة"), ("`expected axis -1 of input shape to have value 3, but received input with shape (None, 16, 16, 1)`", "النموذج بُني لـ 3 قنوات والصور رمادية (أو العكس)", "`Input(shape=(16, 16, X.shape[-1]))`"),
@@ -90,4 +108,4 @@ def render() -> None:
         Q("خريطة خصائص سوداء تمامًا لكل الصور:", ["نواة ممتازة", "وحدة ميتة محتملة", "الصورة فارغة"], 1, ""),
     ])
     takeaway("النوى والخرائط مرئية ومفسِّرة. الأخطاء تُقرأ من الصور الخاطئة. أخطاء الأشكال الخمسة تُمنع بسطر طباعة وsummary وحاسبة الأشكال.")
-    lesson_footer(LESSON, ["النوى والخرائط الحية.", "تحليل الأخطاء.", "جدول أخطاء الأشكال والاختبار البعدي."])
+    lesson_footer(LESSON, ["النوى والخرائط الحية.", "تحليل الأخطاء وحساسية الإخفاء (تحريك).", "جدول أخطاء الأشكال والاختبار البعدي."])
