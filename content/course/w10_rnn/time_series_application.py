@@ -7,6 +7,8 @@ from components.comparison import compare_table
 from components.lesson_layout import h2, lesson_footer, lesson_header
 from components.quiz import Q
 from components.week import post_test
+from components.animation_player import Frame, animation_player, caption
+from content.course.w10_rnn._viz import forecast_svg, split_svg
 from core.models import Lesson
 from core.rtl import table
 from labs.fw import keras_seq_run
@@ -43,6 +45,12 @@ rmse_model, rmse_naive = rmse(pred, y_te * sd + mu), rmse(naive, y_te * sd + mu)
 def render() -> None:
     lesson_header(LESSON)
     why("كل ما سبق نظري حتى تُدرَّب RNN على سلسلة حقيقية-الشكل وتُقارَن بأبسط تنبؤ ممكن: «الشهر القادم = هذا الشهر». النتيجة تعلّم أكثر من أي معادلة.")
+    scaps = ["**التدريب أولًا**: أول 120 شهرًا. منها فقط نحسب μ وσ للتوحيد، ومنها نبني نوافذ التدريب.",
+             "**ثم التحقق**: 24 شهرًا تالية لاختيار الإيقاف المبكر.",
+             "**ثم الاختبار**: آخر الأشهر، يُلمس مرة واحدة. الترتيب الزمني مقدس: لا خلط.",
+             "**الحدود**: أول نافذة اختبار تحتاج 12 شهرًا سابقة — تقع في فترة التحقق. هذا مسموح (قيم ماضية معروفة وقت التنبؤ) لكن الهدف نفسه دائمًا في المستقبل."]
+    animation_player("w10_split", [Frame(split_svg(stage=i), caption(c), action=["train", "validation", "test", "boundary"][i]) for i, c in enumerate(scaps)],
+                     title_ar="التقسيم الزمني للتضخم (180 شهرًا)", interval_ms=2200)
     st.code(CODE, language="python")
     h2("التجربة", "The experiment")
     c1, c2, c3, c4 = st.columns(4)
@@ -59,11 +67,18 @@ def render() -> None:
     table(["النموذج", "RMSE على الاختبار (وحدة السلسلة)", "مقارنة بالساذج"],
           [("المتوسط التاريخي", f"{r['rmse_mean']:.3f}", f"{100 * (r['rmse_mean'] / r['rmse_naive'] - 1):+.0f}%"), ("الساذج (القيمة الأخيرة)", f"{r['rmse_naive']:.3f}", "—"), ("SimpleRNN", f"{r['rmse']:.3f}", f"{100 * (r['rmse'] / r['rmse_naive'] - 1):+.0f}%")], ["rtl", "num", "num"])
     fig = go.Figure(); t = np.arange(len(r["true"]))
-    fig.add_trace(go.Scatter(x=t, y=r["true"], name="true", line=dict(color="#2B2A28", width=2.5)))
-    fig.add_trace(go.Scatter(x=t, y=r["naive"], name="naive (last value)", line=dict(color="#B9B2A6", width=1.5, dash="dot")))
-    fig.add_trace(go.Scatter(x=t, y=r["pred"], name="SimpleRNN", line=dict(color="#C8473A", width=2)))
-    fig.update_layout(height=320, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="test month", yaxis_title="value", plot_bgcolor="#FFFDF9", paper_bgcolor="#FFFDF9", legend=dict(orientation="h"))
+    fig.add_trace(go.Scatter(x=t, y=r["true"], name="true", line=dict(color="#1E1B4B", width=2.5)))
+    fig.add_trace(go.Scatter(x=t, y=r["naive"], name="naive (last value)", line=dict(color="#94A3B8", width=1.5, dash="dot")))
+    fig.add_trace(go.Scatter(x=t, y=r["pred"], name="SimpleRNN", line=dict(color="#DB2777", width=2)))
+    fig.update_layout(height=320, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="test month", yaxis_title="value", legend=dict(orientation="h"))
     st.plotly_chart(fig, width="stretch", key="w10_pred_fig")
+    n_te = len(r["true"])
+    fcaps = []
+    for k in range(n_te):
+        d_r, d_n = abs(r["pred"][k] - r["true"][k]), abs(r["naive"][k] - r["true"][k])
+        fcaps.append(f"**شهر الاختبار {k + 1}**: الحقيقة {r['true'][k]:.2f}، RNN {r['pred'][k]:.2f} (خطأ {d_r:.2f})، الساذج {r['naive'][k]:.2f} (خطأ {d_n:.2f}) — " + ("RNN أقرب هذا الشهر." if d_r < d_n else "الساذج أقرب هذا الشهر."))
+    animation_player(f"w10_fc_{series}_{window}_{units}_{epochs}", [Frame(forecast_svg(r, k), caption(c), action=f"month {k + 1}") for k, c in enumerate(fcaps)],
+                     title_ar="التنبؤ شهرًا شهرًا على فترة الاختبار", interval_ms=650)
     verdict = r["rmse"] < r["rmse_naive"]
     with st.expander("كيف أقرأ النتيجة؟", expanded=True, icon=":material/visibility:"):
         if series == "inflation":

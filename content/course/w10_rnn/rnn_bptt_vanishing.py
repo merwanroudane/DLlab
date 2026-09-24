@@ -8,6 +8,8 @@ from components.lesson_layout import h2, lesson_footer, lesson_header
 from components.math_explainer import equation
 from components.quiz import Q, quiz
 from core.models import Lesson
+from components.animation_player import Frame, animation_player, caption
+from content.course.w10_rnn._viz import bptt_norms, bptt_svg
 from core.routing import go as goto
 from labs.rnn import bptt_gradient_norms
 
@@ -18,7 +20,7 @@ LESSON = Lesson(
     module="course.w10",
     order=3,
     prerequisites=["course.w10.sequences_hidden_state", "foundations.backprop.backpropagation.vanishing_exploding", "foundations.calculus.chain_rule"],
-    objectives_ar=["BPTT: الشبكة المنشورة هي شبكة عميقة بعمق T بأوزان مشتركة؛ التدرج يمر عبر T يعقوبيًا.", "التلاشي والانفجار كدالة في نصف قطر Wh وطول التسلسل، بالأرقام والرسم.", "العلاجات: القصّ، النوافذ الأقصر، التهيئة — ولماذا LSTM/GRU الحل البنيوي (تمهيد)."],
+    objectives_ar=["BPTT: الشبكة المنشورة هي شبكة عميقة بعمق T بأوزان مشتركة؛ التدرج يمر عبر T يعقوبيًا — ونشاهده يعود خطوةً خطوة (تحريك).", "التلاشي والانفجار كدالة في نصف قطر Wh وطول التسلسل، بالأرقام والرسم.", "العلاجات: القصّ، النوافذ الأقصر، التهيئة — ولماذا LSTM/GRU الحل البنيوي (تمهيد)."],
     terms=["gradient", "chain_rule", "backpropagation"],
     labs=["labs.rnn_unrolling_lab"],
     difficulty="advanced",
@@ -34,6 +36,19 @@ def render() -> None:
              meaning_ar="التدرج الذي يصل من الخسارة عند T إلى الخطوة t يُضرب في ρ تقريبًا (T−t) مرة: ρ < 1 → 0 (تلاشٍ)، ρ > 1 → ∞ (انفجار). مشتقة tanh تدفع دائمًا نحو التلاشي.",
              example_ar="ρ = 0.5 وT−t = 20: 0.5²⁰ ≈ 10⁻⁶ — الخطوة الأولى لا تتعلم شيئًا من خطأ الخطوة العشرين.", dl_link_ar="هذا سبب `clipnorm` في المحسّنات وسبب وجود LSTM/GRU أصلًا.", title_ar="تدرج الحالة عبر الزمن")
     why("في الدرس السابق كان فارق الذاكرة 0.015: أثر الماضي ضعيف في التمرير الأمامي، والأسوأ في الخلفي — التدرج الذي يعلّم الشبكة «تذكّر ما حدث قبل 20 خطوة» يصل مضروبًا في ρ²⁰. النموذج **لا يستطيع** تعلّم الاعتماديات الطويلة حتى لو كانت في البيانات. هذه ليست مشكلة ضبط بل مشكلة بنية.")
+    h2("شاهد التدرج يعود عبر الزمن", "Watch the gradient travel back in time")
+    bn = bptt_norms()
+    T = len(bn["0.5"])
+    shown = [1, 2, 3, 5, 8, 12, 16, 20, 25, 30]
+    bcaps = []
+    for u in shown:
+        t = T - u + 1
+        vals = {k: v[u - 1] for k, v in bn.items()}
+        bcaps.append(f"**من الخطوة 30 إلى الخطوة {t}** ({u - 1} خطوة إلى الخلف): ρ = 0.5 → {vals['0.5']:.1e}؛ ρ = 1.0 → {vals['1.0']:.1e}؛ ρ = 1.5 → {vals['1.5']:.1e}."
+                     + (" مع ρ = 1.5 التدرج **يكبر** أولًا (أكثر من 1)…" if u == 3 else "")
+                     + (" …لكن تشبع tanh (1 − h² صغيرة) يكبحه ثم يهبط. مع ρ = 0.5 وصلنا إلى الملايين من الجزء — الخطوات الأولى لا تتعلم شيئًا." if u == 20 else ""))
+    animation_player("w10_bptt_anim", [Frame(bptt_svg(bn, u), caption(c), action=f"{u - 1} steps back") for u, c in zip(shown, bcaps)],
+                     title_ar="‖∂h₃₀/∂hₜ‖ لثلاث قيم لنصف القطر الطيفي (خلية tanh حقيقية)", interval_ms=1600)
     h2("التجربة", "The experiment")
     c1, c2 = st.columns(2)
     with c1:
@@ -41,12 +56,12 @@ def render() -> None:
     with c2:
         rhos = st.multiselect("نصف القطر الطيفي ρ(Wh)", [0.3, 0.5, 0.9, 1.0, 1.2, 2.0, 4.0], default=[0.5, 0.9, 1.0, 2.0], key="w10_rhos")
     fig = go.Figure(); rows = []
-    colors = ["#2F6FB5", "#1F7A78", "#7C5CBF", "#D9A21B", "#C8473A", "#6B675F", "#E8710A"]
+    colors = ["#2563EB", "#059669", "#7C3AED", "#D97706", "#DB2777", "#6B675F", "#E8710A"]
     for rho, color in zip(rhos, colors):
         norms = bptt_gradient_norms(int(T), wh_scale=float(rho))
         fig.add_trace(go.Scatter(x=list(range(T, 0, -1)), y=norms, name=f"ρ = {rho}", line=dict(color=color, width=2.5)))
         rows.append((str(rho), f"{norms[min(9, len(norms) - 1)]:.2e}", f"{norms[-1]:.2e}", "تلاشٍ" if norms[-1] < 1e-3 else ("انفجار" if norms[-1] > 10 else "معتدل")))
-    fig.update_layout(height=340, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="timestep t (gradient flows from T back to t)", yaxis_title="‖∂h_T/∂h_t‖ (log)", yaxis_type="log", plot_bgcolor="#FFFDF9", paper_bgcolor="#FFFDF9", legend=dict(orientation="h"))
+    fig.update_layout(height=340, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="timestep t (gradient flows from T back to t)", yaxis_title="‖∂h_T/∂h_t‖ (log)", yaxis_type="log", legend=dict(orientation="h"))
     st.plotly_chart(fig, width="stretch", key="w10_bptt_fig")
     from core.rtl import table
     table(["ρ(Wh)", "‖∂h_T/∂h_(T−10)‖", "‖∂h_T/∂h_1‖", "الحكم"], rows, ["num", "num", "num", "rtl"])

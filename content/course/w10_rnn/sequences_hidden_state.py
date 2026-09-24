@@ -7,6 +7,8 @@ from components.lesson_layout import h2, lesson_footer, lesson_header
 from components.math_explainer import equation
 from components.quiz import Q, quiz
 from core.models import Lesson
+from components.animation_player import Frame, animation_player, caption
+from content.course.w10_rnn._viz import inflation, unroll_data, unroll_svg, window_svg
 from core.routing import go as goto
 
 LESSON = Lesson(
@@ -16,7 +18,7 @@ LESSON = Lesson(
     module="course.w10",
     order=2,
     prerequisites=["course.w10.overview", "foundations.data.data_modalities", "foundations.linalg.tensors"],
-    objectives_ar=["تحويل سلسلة إلى نوافذ بشكل (samples, timesteps, features) وفهم لماذا الترتيب مهم.", "خلية RNN: h_t = tanh(x_t Wx + h_{t−1} Wh + b) بالمعادلة وباليد وبالتحريك.", "نفس الأوزان في كل خطوة: المعلمات لا تعتمد على طول التسلسل."],
+    objectives_ar=["تحويل سلسلة إلى نوافذ بشكل (samples, timesteps, features) وفهم لماذا الترتيب مهم.", "النافذة المنزلقة على سلسلة التضخم الحقيقية (تحريك) والخلية المنشورة عبر الزمن بحالتها المخفية (تحريك).", "خلية RNN: h_t = tanh(x_t Wx + h_{t−1} Wh + b) بالمعادلة وباليد وبالتحريك.", "نفس الأوزان في كل خطوة: المعلمات لا تعتمد على طول التسلسل."],
     terms=["sequence", "time_series", "shape", "weight"],
     labs=["labs.rnn_unrolling_lab"],
     difficulty="intermediate",
@@ -59,6 +61,13 @@ def render() -> None:
     compare_table(["البعد", "المعنى", "مثال التضخم", "مثال نص"],
                   [("samples", "عدد النوافذ", "168 نافذة من 180 شهرًا", "عدد الجمل"), ("timesteps", "طول النافذة", "12 شهرًا", "عدد الكلمات (بحشو)"), ("features", "قيم كل خطوة", "1 (التضخم) أو 3 (+ الفائدة والبطالة)", "طول تضمين الكلمة")],
                   ["code", "rtl", "rtl", "rtl"])
+    inf = inflation()
+    starts = [0, 12, 24, 40, 60, 90, 120, 150, 167]
+    wcaps = [f"**النافذة رقم {t0}**: 12 شهرًا ({inf['dates'][t0]} إلى {inf['dates'][t0 + 11]}) هي المدخل X، والشهر التالي ({inf['dates'][t0 + 12]}، النقطة الوردية = {inf['y'][t0 + 12]:.2f}%) هو الهدف y."
+             + (" النافذة التالية تبدأ شهرًا واحدًا بعدها: النوافذ **متداخلة**، و180 شهرًا تعطي 180 − 12 = 168 نافذة." if i == 0 else "")
+             + (" آخر نافذة ممكنة: بعدها لا يوجد شهر هدف." if t0 == 167 else "") for i, t0 in enumerate(starts)]
+    animation_player("w10_window", [Frame(window_svg(inf["y"], inf["dates"], t0), caption(c), action=f"sample {t0}") for t0, c in zip(starts, wcaps)],
+                     title_ar="نافذة 12 شهرًا تنزلق على التضخم الشهري", interval_ms=1800)
     why("MLP على نافذة مسطّحة (12 رقمًا) ممكن — لكنه يعامل «الشهر الأول» و«الشهر الثاني عشر» كخصائص مستقلة بلا معنى للترتيب، ويحتاج إعادة تدريب لأي طول آخر. RNN تقرأ الخطوات **بالترتيب** بخلية واحدة تحمل حالة — تعمل لأي طول وتتشارك الأوزان عبر الزمن كما تتشاركها CNN عبر المكان.")
     h2("الخلية والحالة المخفية", "The cell and the hidden state")
     equation(r"h_t = \tanh\big(x_t W_x + h_{t-1} W_h + b\big), \qquad \hat y = h_T W_y + b_y",
@@ -73,6 +82,17 @@ def render() -> None:
         run=run_printed(CODE),
         after_ar="- `X[1]` تبدأ من `s[1]`: النوافذ متداخلة، وهذا مهم عند التقسيم (لا تخلط: تسريب من المستقبل).\n- h النهائية (3 أرقام) هي «ملخص» 12 شهرًا يُعطى للرأس Dense(1) للتنبؤ بالشهر 13.\n- الأوزان عشوائية هنا؛ التدريب (الدرس الرابع) يجعل الملخص مفيدًا.\n- الفارق 0.015 هو أول دليل على **تلاشي** أثر الماضي البعيد في RNN البسيط.",
     ))
+    h2("الخلية منشورة عبر الزمن", "The cell unrolled through time")
+    ud = unroll_data()
+    ucaps = []
+    for t, stp in enumerate(ud["steps"]):
+        hp, h = stp["h_prev"], stp["h"]
+        ucaps.append(f"**الخطوة {t + 1}**: الخلية تقرأ `x_{t + 1} = {stp['x'][0]:+.2f}` (تضخم محجَّم) و`h_{t}` = [{', '.join(f'{v:+.2f}' for v in hp)}]، وتنتج `h_{t + 1}` = [{', '.join(f'{v:+.2f}' for v in h)}]."
+                     + (" البداية: h₀ = صفر (لا ذاكرة)." if t == 0 else "")
+                     + (" لاحظ أن h يتغير تدريجيًا: كل خطوة تمزج المدخل الجديد مع ما تحمله الذاكرة." if t == 2 else "")
+                     + (" **آخر حالة** تلخّص النافذة كلها — وهي ما تقرؤه Dense(1) لتتنبأ بالشهر التالي." if t == len(ud["steps"]) - 1 else ""))
+    animation_player("w10_unroll", [Frame(unroll_svg(ud, k), caption(c), action=f"t = {k + 1}") for k, c in enumerate(ucaps)],
+                     title_ar="RNN بثلاث وحدات مخفية على 6 أشهر حقيقية (أوزان عشوائية ثابتة للتوضيح)", interval_ms=2300)
     st.button("افتح معمل نشر RNN عبر الزمن", icon=":material/science:", type="primary", on_click=goto, args=("labs.rnn_unrolling_lab",), key="w10_lab_unroll")
     intuition("تخيّل قراءة جملة كلمةً كلمة مع ورقة صغيرة تكتب عليها ملخصك حتى الآن وتمحو وتعيد الكتابة بنفس القاعدة عند كل كلمة. الورقة هي h، القاعدة هي (Wx, Wh, b)، والجملة هي التسلسل. الورقة صغيرة — وهنا تبدأ المشكلة (الدرس التالي).")
     common_mistake("`train_test_split(X, y, shuffle=True)` على نوافذ زمنية: نافذة من 2024 في التدريب ونافذة متداخلة معها من 2024 في الاختبار — النموذج «رأى» المستقبل. التقسيم زمني دائمًا: الماضي للتدريب، ثم التحقق، ثم الاختبار الأحدث.")
