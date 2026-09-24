@@ -26,7 +26,27 @@
   --sem-ok: #059669;     --sem-ok-bg: #E3F8EF;
   --sem-warn: #D97706;   --sem-warn-bg: #FFF4DE;
   --sem-fail: #BE123C;   --sem-fail-bg: #FFE4EA;
+
+  /* cool neutral surfaces (replace the warm cream of base.css) */
+  --c-bg: #F7F8FF;
+  --c-cream: #F1F4FF;
+  --c-cream-2: #EEF2FF;
+  --c-border: #DDE3F5;
 }
+
+/* ---------------------------------------------------------------- page background: soft multicolour wash */
+.stApp {
+  background:
+    radial-gradient(1100px 650px at 0% 0%, rgba(124, 58, 237, 0.13), transparent 60%),
+    radial-gradient(1000px 600px at 100% 0%, rgba(37, 99, 235, 0.13), transparent 60%),
+    radial-gradient(900px 650px at 50% 45%, rgba(8, 145, 178, 0.08), transparent 65%),
+    radial-gradient(1000px 700px at 100% 100%, rgba(5, 150, 105, 0.12), transparent 60%),
+    radial-gradient(1000px 700px at 0% 100%, rgba(217, 119, 6, 0.11), transparent 60%),
+    linear-gradient(135deg, #F5F3FF 0%, #EFF6FF 35%, #ECFDF5 70%, #FFFBEB 100%);
+  background-attachment: fixed;
+}
+header[data-testid="stHeader"] { background: transparent; }
+[data-testid="stVerticalBlockBorderWrapper"] { background: rgba(255, 255, 255, 0.82); }
 
 /* ---------------------------------------------------------------- headings */
 [data-testid="stMarkdownContainer"] h1 {

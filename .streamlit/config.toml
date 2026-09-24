@@ -10,15 +10,15 @@ base = "light"
 # Light, bright, multicolour palette (spec §14): accents rotate through
 # violet, blue, cyan, emerald, amber, orange and pink — see assets/styles/colors.css.
 primaryColor = "#7C3AED"                 # vivid violet: buttons, links, active nav
-backgroundColor = "#FFFDF9"              # warm white
-secondaryBackgroundColor = "#FBF4E8"     # cream: widgets, code blocks, cards
+backgroundColor = "#F7F8FF"              # cool white under the multicolour gradient
+secondaryBackgroundColor = "#EEF2FF"     # light indigo: widgets, code blocks
 textColor = "#2B2A28"
 linkColor = "#2563EB"
-borderColor = "#EADFCD"
-codeBackgroundColor = "#F6F1E7"
+borderColor = "#DDE3F5"
+codeBackgroundColor = "#F1F4FF"
 codeTextColor = "#2B2A28"
-dataframeBorderColor = "#EADFCD"
-dataframeHeaderBackgroundColor = "#F6EEDF"
+dataframeBorderColor = "#DDE3F5"
+dataframeHeaderBackgroundColor = "#EEF2FF"
 
 # Semantic palette (also mirrored as CSS variables in assets/styles/base.css)
 redColor = "#C8473A"       # loss / failure
