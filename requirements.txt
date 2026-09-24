@@ -8,7 +8,11 @@ pandas==3.0.5
 plotly==7.0.0
 scikit-learn==1.9.1
 # Frameworks Academy (module 21): imported lazily inside the lessons that need them.
-tensorflow==2.20.0
+# TensorFlow has no Python 3.14 wheels (2.20/2.21 stop at cp313). The marker keeps the install
+# from failing on 3.14; deploy on 3.11-3.13 for the TensorFlow/Keras lessons to work.
+tensorflow==2.20.0; python_version < "3.14"
+# TensorFlow 2.20 declares protobuf>=5.28 with no ceiling; the resolver otherwise picks 7.x.
+protobuf>=5.28,<7
 keras==3.15.1
 # CPU build of PyTorch (resolved from the extra index above). On Windows/macOS, where PyPI only
 # ships CPU wheels anyway, plain `torch==2.14.0` is equivalent.
