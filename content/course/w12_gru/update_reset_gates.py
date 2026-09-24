@@ -7,6 +7,8 @@ from components.lesson_layout import h2, lesson_footer, lesson_header
 from components.math_explainer import equation
 from components.quiz import Q, quiz
 from core.models import Lesson
+from components.animation_player import Frame, animation_player, caption
+from content.course.w11_lstm._viz import gru_cell_svg, gru_step_data
 from core.routing import go as goto
 
 LESSON = Lesson(
@@ -16,8 +18,8 @@ LESSON = Lesson(
     module="course.w12",
     order=2,
     prerequisites=["course.w12.overview", "course.w11.cell_gates_equations"],
-    objectives_ar=["معادلات GRU الأربع ومعنى z وr.", "مقابلة GRU بـ LSTM: ما دُمج وما حُذف.", "تنفيذ خلية GRU يدويًا ومطابقتها بـ Keras بنفس الأوزان."],
-    terms=["hadamard_product", "gradient"],
+    objectives_ar=["معادلات GRU الأربع ومعنى z وr، ومشاهدة الخلية مرحلةً مرحلة بقيم حقيقية (تحريك).", "مقابلة GRU بـ LSTM: ما دُمج وما حُذف.", "تنفيذ خلية GRU يدويًا ومطابقتها بـ Keras بنفس الأوزان."],
+    terms=["hadamard_product", "gradient", "gru", "gate", "hidden_state"],
     labs=["labs.gru_gates_lab"],
     difficulty="advanced",
     summary_ar="z = σ(…Wz)، r = σ(…Wr)، h̃ = tanh([x, r⊙h]Wh)، h = (1−z)⊙h + z⊙h̃. z تدمج النسيان والإدخال (نسيان = 1−z)؛ r تقرر كم من الماضي يدخل في المرشَّح؛ لا حالة خلية منفصلة. 3 مجموعات أوزان بدل 4.",
@@ -59,6 +61,16 @@ def render() -> None:
     equation(r"\tilde h_t = \tanh\big([x_t,\; r_t \odot h_{t-1}]\, W_h + b_h\big), \qquad h_t = (1 - z_t) \odot h_{t-1} + z_t \odot \tilde h_t",
              [(r"\tilde h_t", "المرشَّح: يُحسب من المدخل ومن **جزء** من الماضي تحدده r."), ("(1 - z_t)", "نصيب القديم؛ z_t نصيب الجديد: متوسط موزون (تحدّب) — لا يمكن أن «ينفجر» الحجم."), ("h_t", "الحالة الوحيدة: تُكشف كاملة وتعود للخطوة التالية.")],
              meaning_ar="مسار الجمع (1−z)⊙h يحفظ التدرج كما تفعل c في LSTM؛ وبما أن (1−z) + z = 1، الحالة مزيج بين القديم والجديد.", example_ar="h_prev = 2، h̃ = −1، z = 0.25 → h = 0.75×2 + 0.25×(−1) = 1.25.", dl_link_ar="Keras 3 افتراضيًا `reset_after=True` (صيغة CuDNN؛ فرق طفيف في موضع r).", title_ar="المرشَّح والمزج")
+    h2("الخلية تعمل: خطوة واحدة مرحلةً مرحلة", "The cell at work, stage by stage")
+    gd = gru_step_data()
+    stp = gd["steps"][1]
+    gcaps = [f"**المدخلات**: الحالة السابقة `h_(t−1)` = [{', '.join(f'{v:.2f}' for v in stp['h_prev'])}] والمدخل `x = {stp['x'][0]:+.1f}`. لا حالة خلية منفصلة: h هي الذاكرة والمخرج معًا.",
+             f"**إعادة الضبط** `r = σ(·)` = [{', '.join(f'{v:.2f}' for v in stp['r'])}]: كم من الماضي يُستعمل **لحساب المرشَّح**. r ≈ 0 = «اقترح بداية جديدة كأن الماضي غير موجود».",
+             f"**المرشَّح** `h̃ = tanh([x, r⊙h]·W)` = [{', '.join(f'{v:.2f}' for v in stp['h_tilde'])}]: الحالة المقترحة.",
+             f"**التحديث** `z = σ(·)` = [{', '.join(f'{v:.2f}' for v in stp['z'])}]: نسبة الاستبدال لكل وحدة.",
+             f"**المزج**: `h = (1−z)⊙h_(t−1) + z⊙h̃` = [{', '.join(f'{v:.2f}' for v in stp['h'])}]. متوسط موزون لكل وحدة بين القديم والمقترح — الجزء (1−z)⊙h هو مسار الجمع الذي يحفظ التدرج."]
+    animation_player("w12_cell", [Frame(gru_cell_svg(stp, i), caption(c), action=["inputs", "reset r", "candidate", "update z", "blend"][i], highlight=i) for i, c in enumerate(gcaps)],
+                     title_ar="خلية GRU (H = 3) — أرقام محسوبة فعلًا", stages=["in", "r", "h̃", "z", "h"], interval_ms=2500)
     h2("GRU مقابل LSTM", "GRU vs LSTM")
     compare_table(["الجانب", "LSTM", "GRU"],
                   [("الحالات", "c (ذاكرة) + h (مكشوفة)", "h فقط"), ("البوابات", "f، i، o", "z، r"), ("النسيان/الإدخال", "مستقلان (f، i)", "مرتبطان: (1−z)، z"), ("التحكم في الكشف", "o", "لا (h مكشوفة دائمًا)"), ("مصفوفات الأوزان", "4", "3"), ("المعلمات (D=1, H=32)", "4,352", "3,264"),

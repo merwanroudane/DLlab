@@ -9,6 +9,9 @@ from components.quiz import Q, quiz
 from core.models import Lesson
 from core.rtl import table
 from labs.fw import keras_seq_run
+from components import svgkit as K
+from components.animation_player import Frame, animation_player, caption
+from labs.rnn import count_params
 
 LESSON = Lesson(
     id="course.w12.compare_rnn_lstm_gru",
@@ -17,8 +20,8 @@ LESSON = Lesson(
     module="course.w12",
     order=3,
     prerequisites=["course.w12.update_reset_gates", "course.w11.train_eval_diagnose"],
-    objectives_ar=["تدريب GRU على نفس خط الأنابيب ومقارنتها بـ RNN وLSTM والساذج: المعلمات، الزمن، RMSE، الحقب.", "قراءة المقارنة بأمانة إحصائية: ضوضاء الاختبار والبذور.", "قاعدة اختيار البنية التكرارية."],
-    terms=["sequence"],
+    objectives_ar=["رؤية من أين يأتي فرق المعلمات: كتلة أوزان واحدة (RNN) وثلاث (GRU) وأربع (LSTM) (تحريك).", "تدريب GRU على نفس خط الأنابيب ومقارنتها بـ RNN وLSTM والساذج: المعلمات، الزمن، RMSE، الحقب.", "قراءة المقارنة بأمانة إحصائية: ضوضاء الاختبار والبذور.", "قاعدة اختيار البنية التكرارية."],
+    terms=["sequence", "rnn", "lstm", "gru"],
     labs=["labs.gru_gates_lab"],
     difficulty="intermediate",
     summary_ar="نفس البيانات والتقسيم والمعايير: RNN (أقل معلمات، أسرع، يتلاشى مع الطول)، LSTM (×4، أثقل)، GRU (×3، بين الاثنين). على سلاسل قصيرة الفروق ضوضاء؛ اختر بالتحقق وبالبساطة.",
@@ -28,6 +31,23 @@ LESSON = Lesson(
 def render() -> None:
     lesson_header(LESSON)
     why("ثلاث بنى تكرارية، ونفس السؤال: أيها؟ الجواب الوحيد المقبول علميًا هو **نفس البيانات، نفس التقسيم، نفس المعايير، عدة بذور** — وهذا ما تفعله هذه الصفحة على سلسلتين.")
+    D, H = 1, 16
+    blocks = [("SimpleRNN", 1, K.BLUE, ["h̃"]), ("GRU", 3, K.EMERALD, ["z", "r", "h̃"]), ("LSTM", 4, K.PINK, ["f", "i", "g", "o"])]
+
+    def _blocks_svg(k):
+        s = K.svg_open(700, 220)
+        for bi, (name, nb, col, labels) in enumerate(blocks[: k + 1]):
+            y = 20 + bi * 64
+            s += K.text(80, y + 30, name, size=13, bold=True, color=col, anchor="end")
+            for j in range(nb):
+                s += K.box(95 + j * 120, y + 6, 110, 40, f"W_{labels[j]}", col, filled=bi == k, size=12, sub=f"({D}+{H})×{H}+{H} = {(D + H) * H + H}")
+            s += K.text(95 + 4 * 120 + 10, y + 32, f"= {count_params(name.lower().replace('simple', ''), D, H):,}", size=14, bold=True, color=col, anchor="start", mono=True)
+        return s + "</svg>"
+
+    bcaps = [f"**SimpleRNN**: كتلة أوزان واحدة: (D + H) × H + H = {count_params('rnn', D, H)} معلمة (D = 1 مدخل، H = 16 وحدة).",
+             f"**GRU**: ثلاث كتل بنفس الشكل (z، r، المرشَّح) = {count_params('gru', D, H)}. ثلاثة أضعاف RNN.",
+             f"**LSTM**: أربع كتل (f، i، g، o) = {count_params('lstm', D, H)}. أربعة أضعاف RNN و4/3 من GRU. الفرق كله في عدد البوابات."]
+    animation_player("w12_blocks", [Frame(_blocks_svg(i), caption(c), action=blocks[i][0]) for i, c in enumerate(bcaps)], title_ar="من أين تأتي المعلمات؟ (D = 1، H = 16)", interval_ms=2400)
     c1, c2, c3 = st.columns(3)
     with c1:
         series = st.radio("السلسلة", ["inflation", "seasonal"], format_func=lambda s: "التضخم (180 شهرًا)" if s == "inflation" else "موسمية صناعية (400)", key="w12_series")
@@ -36,7 +56,7 @@ def render() -> None:
     with c3:
         seeds = st.select_slider("عدد البذور", options=[1, 2, 3], value=1, key="w12_seeds")
     rows = []; curves = {}
-    for kind, color in (("rnn", "#7C5CBF"), ("lstm", "#C8473A"), ("gru", "#1F7A78")):
+    for kind, color in (("rnn", "#7C3AED"), ("lstm", "#DB2777"), ("gru", "#059669")):
         rmses, secs, params, eps = [], [], 0, []
         for sd in range(int(seeds)):
             r = keras_seq_run(kind, int(window), 16, 25, seed=sd, series=series)
@@ -53,14 +73,14 @@ def render() -> None:
         for kind, (r, color) in curves.items():
             e = np.arange(1, len(r["history"]["val_loss"]) + 1)
             fig.add_trace(go.Scatter(x=e, y=r["history"]["val_loss"], name=kind, line=dict(color=color, width=2.5)))
-        fig.update_layout(height=300, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="epoch", yaxis_title="val_loss", plot_bgcolor="#FFFDF9", paper_bgcolor="#FFFDF9", legend=dict(orientation="h"))
+        fig.update_layout(height=300, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="epoch", yaxis_title="val_loss", legend=dict(orientation="h"))
         st.plotly_chart(fig, width="stretch", key="w12_val")
     with c5:
         fig2 = go.Figure(); r0 = curves["gru"][0]; t = np.arange(len(r0["true"]))
-        fig2.add_trace(go.Scatter(x=t, y=r0["true"], name="true", line=dict(color="#2B2A28", width=2.5)))
+        fig2.add_trace(go.Scatter(x=t, y=r0["true"], name="true", line=dict(color="#1E1B4B", width=2.5)))
         for kind, (r, color) in curves.items():
             fig2.add_trace(go.Scatter(x=t, y=r["pred"], name=kind, line=dict(color=color, width=1.5)))
-        fig2.update_layout(height=300, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="test month", plot_bgcolor="#FFFDF9", paper_bgcolor="#FFFDF9", legend=dict(orientation="h"))
+        fig2.update_layout(height=300, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="test month", legend=dict(orientation="h"))
         st.plotly_chart(fig2, width="stretch", key="w12_pred")
     with st.expander("كيف أقرأ؟", expanded=True, icon=":material/visibility:"):
         st.markdown("""
