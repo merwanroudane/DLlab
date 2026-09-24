@@ -5,6 +5,8 @@ from components.code_lab import Before, CodeLab, code_lab, run_printed
 from components.comparison import compare_table
 from components.lesson_layout import h2, lesson_footer, lesson_header
 from components.quiz import Q, quiz
+from components.animation_player import Frame, animation_player, caption
+from content.course.w11_lstm._viz import padding_svg
 from core.models import Lesson
 
 LESSON = Lesson(
@@ -14,8 +16,8 @@ LESSON = Lesson(
     module="course.w11",
     order=2,
     prerequisites=["course.w11.overview", "course.w10.sequences_hidden_state", "foundations.prep.tensors_batching_pipelines"],
-    objectives_ar=["نوافذ بعدة متغيرات (features > 1) وأفق تنبؤ > 1 وأشكالها.", "الحشو والقناع للتسلسلات ذات الأطوال المختلفة (نصوص، معاملات عملاء).", "تحجيم كل متغير بإحصاءات الماضي وتقسيم زمني."],
-    terms=["sequence", "shape", "standardization"],
+    objectives_ar=["نوافذ بعدة متغيرات (features > 1) وأفق تنبؤ > 1 وأشكالها.", "الحشو والقناع للتسلسلات ذات الأطوال المختلفة (نصوص، معاملات عملاء) — بتحريك.", "تحجيم كل متغير بإحصاءات الماضي وتقسيم زمني."],
+    terms=["sequence", "shape", "standardization", "padding", "timestep", "lstm"],
     difficulty="intermediate",
     summary_ar="متعدد المتغيرات: (samples, timesteps, 3). أفق h: y بشكل (samples, h). أطوال مختلفة: pad_sequences إلى طول موحّد + Masking لتجاهل الحشو. كل متغير يُوحَّد بإحصاءات التدريب.",
 )
@@ -53,6 +55,11 @@ def render() -> None:
     lesson_header(LESSON)
     why("الأسبوع 10 استخدم متغيرًا واحدًا وأفقًا واحدًا وأطوالًا موحّدة. الواقع: عدة متغيرات (تضخم، فائدة، بطالة)، أفق عدة أشهر، وسلاسل بأطوال مختلفة (كل عميل له عدد معاملات مختلف). الأشكال تتغير — والأخطاء الصامتة تبدأ هنا.")
     definition("**النافذة متعددة المتغيرات**: كل خطوة زمنية متجه features. **الهدف متعدد الخطوات**: y بطول horizon. **الحشو** `padding`: إكمال التسلسلات القصيرة بقيمة خاصة إلى طول موحّد كي تُجمَّع في موتر واحد، مع **قناع** `Masking` يخبر الطبقة التكرارية بتجاهل الخطوات المحشوّة.")
+    pcaps = ["**أربعة عملاء، أربعة أطوال**: عدد المعاملات الشهرية يختلف (3، 6، 2، 4). لا يمكن رصّها في موتر واحد بشكل (n, T, k) لأن T مختلف.",
+             "**الحشو اللاحق** `padding='post'`: نكمل كل تسلسل بأصفار (رمادي متقطع) حتى أطول طول. الآن الموتر (4, 7, 1) — لكن الأصفار ستُقرأ كقيم حقيقية!",
+             "**القناع** `Masking(mask_value=0)`: قناع 1/0 لكل خطوة يخبر LSTM بتخطي الخطوات المحشوّة: تُنقل الحالة كما هي دون تحديث. النتيجة لا تتأثر بطول الحشو."]
+    animation_player("w11_pad", [Frame(padding_svg(i), caption(c), action=["lengths", "pad", "mask"][i]) for i, c in enumerate(pcaps)],
+                     title_ar="من تسلسلات بأطوال مختلفة إلى موتر واحد", interval_ms=2600)
     code_lab(CodeLab(
         key="w11_prep", title_ar="نوافذ بثلاثة متغيرات وأفق ثلاثة أشهر، ثم حشو وقناع لأطوال مختلفة", code=CODE, level="B",
         before=Before(goal_ar="بناء X (n, 12, 3) وy (n, 3) من ثلاث سلاسل شهرية بتوحيد صحيح وتقسيم زمني، ثم حشو ثلاث سلاسل بأطوال مختلفة وإثبات أن القناع يغيّر الناتج.", stage_ar="الأسبوع 11: إعداد البيانات.",

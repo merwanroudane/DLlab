@@ -3,10 +3,12 @@ import streamlit as st
 
 from components.callouts import common_mistake, definition, intuition, research_note, takeaway, why
 from components.comparison import compare_table
-from components.lesson_layout import h2, lesson_footer, lesson_header
+from components.lesson_layout import h2, h3, lesson_footer, lesson_header
 from components.math_explainer import equation
 from components.quiz import Q, quiz
 from core.models import Lesson
+from components.animation_player import Frame, animation_player, caption
+from content.course.w11_lstm._viz import lstm_cell_svg, lstm_step_data, memory_svg, memory_test
 from core.routing import go as goto
 from core.rtl import table
 from labs.rnn import lstm_forward, random_weights, rnn_forward
@@ -18,8 +20,8 @@ LESSON = Lesson(
     module="course.w11",
     order=3,
     prerequisites=["course.w11.data_prep_windows_padding", "course.w10.rnn_bptt_vanishing", "foundations.activations.sigmoid_tanh"],
-    objectives_ar=["المعادلات الست لـ LSTM وتفسير كل رمز.", "معنى كل بوابة بقيمة sigmoid: نسيان/إبقاء، كتابة/تجاهل، كشف/إخفاء.", "لماذا يحفظ مسار الجمع في c_t التدرج — بمقارنة رقمية مع RNN البسيط."],
-    terms=["gradient", "hadamard_product"],
+    objectives_ar=["المعادلات الست لـ LSTM وتفسير كل رمز، ومشاهدة الخلية تعمل مرحلةً مرحلة بقيم بوابات حقيقية (تحريك).", "معنى كل بوابة بقيمة sigmoid: نسيان/إبقاء، كتابة/تجاهل، كشف/إخفاء.", "لماذا يحفظ مسار الجمع في c_t التدرج — بمقارنة رقمية مع RNN البسيط."],
+    terms=["gradient", "hadamard_product", "lstm", "gate", "hidden_state", "sigmoid", "vanishing_gradient"],
     labs=["labs.lstm_gates_lab"],
     difficulty="advanced",
     summary_ar="f, i, o = σ([x, h]W + b)؛ g = tanh(…)؛ c_t = f⊙c_{t−1} + i⊙g؛ h_t = o⊙tanh(c_t). البوابات تتعلم متى تنسى/تكتب/تكشف. c يمر بجمع لا بضرب متكرر: التدرج يبقى.",
@@ -37,6 +39,16 @@ def render() -> None:
     equation(r"\tilde c_t = \tanh\big([x_t, h_{t-1}]\,W_c + b_c\big), \qquad c_t = f_t \odot c_{t-1} + i_t \odot \tilde c_t, \qquad h_t = o_t \odot \tanh(c_t)",
              [(r"\tilde c_t", "المرشَّح: ماذا يمكن كتابته (في (−1, 1))."), (r"c_t", "الذاكرة: جزء من القديم + جزء من الجديد — **جمع**."), (r"h_t", "المخرج: جزء مكشوف من الذاكرة، يعود كمدخل في الخطوة التالية ويُعطى للرأس.")],
              meaning_ar="المعادلة الوسطى هي قلب LSTM: ⊙ ضرب عنصري (الأسس 4) و+ جمع؛ لا Wh متكررة على c.", example_ar="c = 0.95×2.0 + 0.1×0.5 = 1.95: الذاكرة تبقى 1.95 بعد خطوة كاملة.", dl_link_ar="`layers.LSTM(units)`؛ `nn.LSTM` في PyTorch.", title_ar="المرشَّح والذاكرة والمخرج")
+    h2("الخلية تعمل: خطوة زمنية واحدة مرحلةً مرحلة", "The cell at work: one timestep, stage by stage")
+    ld = lstm_step_data()
+    stp = ld["steps"][1]
+    lcaps = [f"**المدخلات**: الذاكرة القديمة `c_(t−1)` (برتقالي، السير الناقل)، الحالة المكشوفة `h_(t−1)`، والمدخل الجديد `x = {stp['x'][0]:+.1f}`. ثلاث وحدات مخفية (H = 3).",
+             f"**بوابة النسيان** `f = σ([x, h]W_f + b_f)` = [{', '.join(f'{v:.2f}' for v in stp['f'])}]: كل رقم بين 0 و1 يقرر كم نبقي من الوحدة المقابلة في الذاكرة. ≈ 0.5 هنا: نصف الماضي يُمحى.",
+             f"**بوابة الإدخال** `i` = [{', '.join(f'{v:.2f}' for v in stp['i'])}] و**المرشَّح** `g = tanh(·)` = [{', '.join(f'{v:.2f}' for v in stp['g'])}]: ماذا نكتب (g) وبأي قدر (i).",
+             f"**تحديث الذاكرة بالجمع**: `c_t = f ⊙ c_(t−1) + i ⊙ g` = [{', '.join(f'{v:.2f}' for v in stp['c'])}]. لا ضرب في مصفوفة Wh على c — هذا «الطريق السريع» للمعلومة والتدرج.",
+             f"**بوابة الإخراج** `o` = [{', '.join(f'{v:.2f}' for v in stp['o'])}] تقرر كم نكشف: `h_t = o ⊙ tanh(c_t)` = [{', '.join(f'{v:.2f}' for v in stp['h'])}]. هذا ما يراه الرأس والخطوة التالية."]
+    animation_player("w11_cell", [Frame(lstm_cell_svg(stp, i), caption(c), action=["inputs", "forget f", "input i, g", "c_t", "output o → h"][i], highlight=i) for i, c in enumerate(lcaps)],
+                     title_ar="خلية LSTM بأوزان عشوائية ثابتة (H = 3) — أرقام محسوبة فعلًا", stages=["in", "forget", "write", "cell", "out"], interval_ms=2600)
     h2("البوابات بالكلمات", "Gates in words")
     compare_table(["البوابة", "≈ 0", "≈ 1", "مثال اقتصادي"],
                   [("النسيان f", "امسح الذاكرة القديمة", "احتفظ بها كاملة", "بداية سنة مالية جديدة: انسَ الموسمية السابقة؟"), ("الإدخال i", "تجاهل هذه الخطوة", "اكتب المرشَّح كاملًا", "صدمة سعرية: اكتبها في الذاكرة"), ("الإخراج o", "لا تكشف شيئًا للمخرج", "اكشف الذاكرة", "الذاكرة مهمة لاحقًا لا الآن: لا تكشف بعد")],
@@ -50,6 +62,15 @@ def render() -> None:
     rows = [(str(t), f"{abs(r_steps[t]['h'][0]):.4f}", f"{abs(l_steps[t]['c'][0]):.4f}", f"{l_steps[t]['f'][0]:.2f}") for t in [0, 1, 2, 5, 10, T - 1] if t < T]
     table(["t", "|h_t[0]| في RNN البسيط", "|c_t[0]| في LSTM", "f_t[0]"], rows, ["num", "num", "num", "num"])
     st.markdown("**التجربة**: إشارة واحدة x₀ = 2 ثم أصفار. في RNN البسيط تتلاشى الحالة أسيًا (ضرب متكرر في Wh وtanh)؛ في LSTM تبقى c قريبة من قيمتها لأن f ≈ 0.88 (جمع مع نسيان بطيء). التدرج يسلك المسار نفسه: يُضرب في f لا في Whᵀ·tanh′.")
+    h3("اختبار الذاكرة متحركًا", "The memory test, animated")
+    mt = memory_test()
+    mcaps = []
+    for k in range(mt["T"]):
+        mcaps.append(f"**t = {k + 1}**: ذاكرة LSTM c = {mt['c'][k]:.3f}، وحالة RNN h = {mt['h_rnn'][k]:.3f}. التدرج الذي يصل من هنا إلى الخطوة 1: LSTM ∏f = {mt['g_lstm'][k]:.2e}، RNN {mt['g_rnn'][k]:.2e}."
+                     + (" الإشارة دخلت عند t = 1 فقط؛ كل ما بعدها أصفار." if k == 0 else "")
+                     + (" RNN فقد معظم الإشارة بينما LSTM يحملها بنسيان بطيء (f ≈ 0.95)." if k == 8 else ""))
+    animation_player("w11_memory", [Frame(memory_svg(mt, k), caption(c), action=f"t = {k + 1}") for k, c in enumerate(mcaps)],
+                     title_ar="نبضة واحدة ثم صمت: من يتذكر؟ (أوزان مضبوطة يدويًا للتوضيح)", interval_ms=700)
     st.button("افتح معمل بوابات LSTM (تحريك بوابةً بوابة)", icon=":material/science:", type="primary", on_click=goto, args=("labs.lstm_gates_lab",), key="w11_lab_gates")
     intuition("LSTM ليست «أذكى» من RNN؛ هي RNN مع **مسار جمع** ومفاتيح متعلَّمة. كل ما تعلمته عن المجموع الموزون وsigmoid وtanh والضرب العنصري يُستخدم هنا بلا مفهوم جديد — فقط تركيب جديد.")
     research_note("**تعميق**: تهيئة انحياز النسيان بـ 1 (Keras: `unit_forget_bias=True` افتراضيًا) تجعل f ≈ 0.73 في البداية فتتذكر الشبكة قبل أن تتعلم متى تنسى. المعلمات = 4 × ((D + H) × H + H): أربع مرات RNN البسيط — وهذا ثمن الذاكرة.")
@@ -61,4 +82,4 @@ def render() -> None:
         Q("LSTM(16) على D=4: المعلمات", ["336", "1,344", "84"], 1, "4×((4+16)×16+16)."),
     ])
     takeaway("ست معادلات: ثلاث بوابات sigmoid، مرشَّح tanh، ذاكرة بجمع، مخرج مكشوف. f/i/o = انسَ/اكتب/اكشف. الجمع في c هو ما يحفظ التدرج. ×4 معلمات.")
-    lesson_footer(LESSON, ["المعادلات بالرموز.", "البوابات بالكلمات والأمثلة.", "مقارنة رقمية مع RNN."])
+    lesson_footer(LESSON, ["المعادلات بالرموز.", "الخلية مرحلةً مرحلة (تحريك).", "البوابات بالكلمات والأمثلة.", "مقارنة رقمية واختبار الذاكرة متحركًا."])
