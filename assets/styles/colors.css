@@ -1,0 +1,127 @@
+/* =====================================================================
+   Multicolour layer (loaded after base.css). Light surfaces stay; the
+   single teal accent is replaced by a rotating, vivid palette so headings,
+   pipelines, chips, tables, callouts and the animation player each carry
+   their own colour. Colour is still never the only carrier of meaning.
+   ===================================================================== */
+
+:root {
+  --m1: #7C3AED;  --m1-bg: #F3EEFF;   /* violet  */
+  --m2: #2563EB;  --m2-bg: #EAF1FF;   /* blue    */
+  --m3: #0891B2;  --m3-bg: #E4F7FB;   /* cyan    */
+  --m4: #059669;  --m4-bg: #E3F8EF;   /* emerald */
+  --m5: #D97706;  --m5-bg: #FFF4DE;   /* amber   */
+  --m6: #EA580C;  --m6-bg: #FFEDE3;   /* orange  */
+  --m7: #DB2777;  --m7-bg: #FFE8F3;   /* pink    */
+  --rainbow: linear-gradient(90deg, #7C3AED, #2563EB, #0891B2, #059669, #D97706, #EA580C, #DB2777);
+
+  /* brighter semantic colours */
+  --c-teal: #7C3AED;
+  --c-teal-bg: #F3EEFF;
+  --sem-data: #2563EB;   --sem-data-bg: #EAF1FF;
+  --sem-param: #7C3AED;  --sem-param-bg: #F3EEFF;
+  --sem-hyper: #EA580C;  --sem-hyper-bg: #FFEDE3;
+  --sem-loss: #DC2626;   --sem-loss-bg: #FEE9E9;
+  --sem-grad: #0891B2;   --sem-grad-bg: #E4F7FB;
+  --sem-ok: #059669;     --sem-ok-bg: #E3F8EF;
+  --sem-warn: #D97706;   --sem-warn-bg: #FFF4DE;
+  --sem-fail: #BE123C;   --sem-fail-bg: #FFE4EA;
+}
+
+/* ---------------------------------------------------------------- headings */
+[data-testid="stMarkdownContainer"] h1 {
+  background: linear-gradient(90deg, #7C3AED 0%, #2563EB 45%, #DB2777 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+[data-testid="stMarkdownContainer"] h2 {
+  color: #1E1B4B;
+  padding-bottom: .35rem;
+  border-bottom: 4px solid transparent;
+  border-image: var(--rainbow) 1;
+}
+[data-testid="stMarkdownContainer"] h2 .en { color: #7C3AED; }
+[data-testid="stMarkdownContainer"] h3 { color: #2563EB; }
+[data-testid="stMarkdownContainer"] h3 .en { color: #DB2777; }
+[data-testid="stMarkdownContainer"] strong { color: #1E1B4B; }
+
+/* inline code: violet chip */
+[data-testid="stMarkdownContainer"] code { background: #F3EEFF; color: #5B21B6; }
+[data-testid="stMarkdownContainer"] blockquote { border-right-color: #DB2777; background: #FFF5FA; }
+
+/* ---------------------------------------------------------------- callouts */
+.dlia-callout {
+  background: linear-gradient(135deg, var(--accent-bg) 0%, #FFFFFF 140%);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-right: 6px solid var(--accent);
+}
+.sem-note { --accent: #7C3AED; --accent-bg: #F3EEFF; }
+.sem-math { --accent: #2563EB; --accent-bg: #EAF1FF; }
+.sem-code { --accent: #0891B2; --accent-bg: #E4F7FB; }
+.sem-ok   { --accent: #059669; --accent-bg: #E3F8EF; }   /* intuition */
+.sem-grad { --accent: #DB2777; --accent-bg: #FFE8F3; }   /* takeaway */
+
+/* ---------------------------------------------------------------- chips & tags (rotate colours) */
+.chip { font-weight: 600; }
+.dlia-rtl .chip:nth-of-type(7n+1) { --accent: var(--m1); --accent-bg: var(--m1-bg); }
+.dlia-rtl .chip:nth-of-type(7n+2) { --accent: var(--m2); --accent-bg: var(--m2-bg); }
+.dlia-rtl .chip:nth-of-type(7n+3) { --accent: var(--m3); --accent-bg: var(--m3-bg); }
+.dlia-rtl .chip:nth-of-type(7n+4) { --accent: var(--m4); --accent-bg: var(--m4-bg); }
+.dlia-rtl .chip:nth-of-type(7n+5) { --accent: var(--m5); --accent-bg: var(--m5-bg); }
+.dlia-rtl .chip:nth-of-type(7n+6) { --accent: var(--m6); --accent-bg: var(--m6-bg); }
+.dlia-rtl .chip:nth-of-type(7n+7) { --accent: var(--m7); --accent-bg: var(--m7-bg); }
+
+.dlia-meta .tag { font-weight: 600; border-width: 1px; }
+.dlia-meta .tag:nth-child(3n+1) { color: var(--m1); background: var(--m1-bg); border-color: #D9C8FF; }
+.dlia-meta .tag:nth-child(3n+2) { color: var(--m2); background: var(--m2-bg); border-color: #C6D8FF; }
+.dlia-meta .tag:nth-child(3n+3) { color: var(--m7); background: var(--m7-bg); border-color: #FFC6E0; }
+
+/* ---------------------------------------------------------------- pipeline: one colour per stage */
+.dlia-pipe .step { font-weight: 600; border-width: 1.5px; }
+.dlia-pipe .step:nth-child(14n+1)  { color: var(--m1); background: var(--m1-bg); border-color: var(--m1); }
+.dlia-pipe .step:nth-child(14n+3)  { color: var(--m2); background: var(--m2-bg); border-color: var(--m2); }
+.dlia-pipe .step:nth-child(14n+5)  { color: var(--m3); background: var(--m3-bg); border-color: var(--m3); }
+.dlia-pipe .step:nth-child(14n+7)  { color: var(--m4); background: var(--m4-bg); border-color: var(--m4); }
+.dlia-pipe .step:nth-child(14n+9)  { color: var(--m5); background: var(--m5-bg); border-color: var(--m5); }
+.dlia-pipe .step:nth-child(14n+11) { color: var(--m6); background: var(--m6-bg); border-color: var(--m6); }
+.dlia-pipe .step:nth-child(14n+13) { color: var(--m7); background: var(--m7-bg); border-color: var(--m7); }
+.dlia-pipe .step.active {
+  color: #fff !important; border-color: transparent !important;
+  background: linear-gradient(135deg, #7C3AED, #DB2777) !important;
+  box-shadow: 0 3px 10px rgba(124, 58, 237, .35);
+}
+.dlia-pipe .arrow { color: #A78BFA; font-weight: 700; }
+
+/* ---------------------------------------------------------------- cards, hero, tables */
+.dlia-card { border-top: 0; position: relative; overflow: hidden; padding-top: 1.2rem; }
+.dlia-card::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 5px; background: var(--rainbow); }
+.dlia-card h4 { color: #5B21B6; }
+
+.dlia-hero {
+  background: linear-gradient(120deg, #F3EEFF 0%, #EAF1FF 30%, #E4F7FB 55%, #FFF4DE 80%, #FFE8F3 100%);
+  border: 0; box-shadow: 0 4px 22px rgba(124, 58, 237, .12);
+}
+.dlia-hero .author { color: #DB2777; }
+
+table.dlia-table { border-color: #DCD3F5; }
+table.dlia-table th {
+  background: linear-gradient(90deg, #F3EEFF, #EAF1FF 50%, #E4F7FB);
+  color: #3B1E8A;
+}
+table.dlia-table tr:nth-child(even) td { background: #FAF8FF; }
+table.dlia-table tr:hover td { background: #FFF5FA; }
+
+.dlia-brand { background: linear-gradient(135deg, #F3EEFF, #E4F7FB); border-color: #DCD3F5; }
+.dlia-brand .t { color: #5B21B6; }
+
+/* ---------------------------------------------------------------- Streamlit widgets */
+.stButton button[kind="primary"], [data-testid="stBaseButton-primary"] {
+  background: linear-gradient(135deg, #7C3AED, #2563EB) !important; border: 0 !important; color: #fff !important;
+}
+.stButton button[kind="secondary"]:hover, [data-testid="stBaseButton-secondary"]:hover {
+  border-color: #DB2777 !important; color: #DB2777 !important;
+}
+[data-testid="stExpander"] details { border-right: 4px solid #0891B2; }
+[data-testid="stMetricValue"] { color: #7C3AED; }
+[data-testid="stHorizontalBlock"] [data-testid="stColumn"]:nth-child(2) [data-testid="stMetricValue"] { color: #DB2777; }
+[data-testid="stHorizontalBlock"] [data-testid="stColumn"]:nth-child(3) [data-testid="stMetricValue"] { color: #059669; }
+[data-testid="stForm"] { border: 1.5px solid #D9C8FF !important; background: linear-gradient(180deg, #FCFAFF, #FFFFFF); }

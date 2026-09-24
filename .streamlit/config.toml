@@ -7,12 +7,13 @@ gatherUsageStats = false
 
 [theme]
 base = "light"
-# Warm, bright, academic palette (spec §14). No dark navy.
-primaryColor = "#1F7A78"                 # deep teal: buttons, links, active nav
+# Light, bright, multicolour palette (spec §14): accents rotate through
+# violet, blue, cyan, emerald, amber, orange and pink — see assets/styles/colors.css.
+primaryColor = "#7C3AED"                 # vivid violet: buttons, links, active nav
 backgroundColor = "#FFFDF9"              # warm white
 secondaryBackgroundColor = "#FBF4E8"     # cream: widgets, code blocks, cards
 textColor = "#2B2A28"
-linkColor = "#1F7A78"
+linkColor = "#2563EB"
 borderColor = "#EADFCD"
 codeBackgroundColor = "#F6F1E7"
 codeTextColor = "#2B2A28"
@@ -28,7 +29,7 @@ blueColor = "#2F6FB5"      # input / data
 violetColor = "#7C5CBF"    # parameters
 grayColor = "#6B675F"
 
-chartCategoricalColors = ["#2F6FB5", "#7C5CBF", "#C77A1A", "#C8473A", "#1F7A78", "#2E8B57", "#B8860B", "#6B675F"]
+chartCategoricalColors = ["#2563EB", "#DB2777", "#F59E0B", "#059669", "#7C3AED", "#EA580C", "#0891B2", "#DC2626"]
 chartSequentialColors = ["#FFF9EC", "#FDEFD2", "#F9E0B4", "#F2CB8E", "#E9B36A", "#DB9A4B", "#C97F33", "#B26421", "#964C15", "#76370D"]
 
 font = "'IBM Plex Sans Arabic':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"

@@ -87,7 +87,41 @@ _CSS = """
 .ap-sp { border:1px solid #EADFCD; background:#fff; border-radius:6px; padding:.15rem .45rem; cursor:pointer; font-size:.8rem; }
 .ap-sp-on { background:#E0F3F1; border-color:#1F7A78; color:#1F7A78; font-weight:600; }
 .ap-range { flex:1 1 140px; accent-color:#1F7A78; }
-@media (prefers-reduced-motion: reduce) { .ap * { transition:none !important; } }
+/* multicolour layer */
+.ap { border:0; position:relative; overflow:hidden; padding-top:1.1rem;
+      box-shadow: 0 2px 6px rgba(76,29,149,.08), 0 8px 26px rgba(37,99,235,.10); }
+.ap::before { content:""; position:absolute; inset:0 0 auto 0; height:5px;
+      background:linear-gradient(90deg,#7C3AED,#2563EB,#0891B2,#059669,#D97706,#EA580C,#DB2777); }
+.ap-title { color:#5B21B6; }
+.ap-counter { color:#DB2777; font-weight:700; }
+.ap-pipe .s { font-weight:600; border-width:1.5px; transition: transform .25s, box-shadow .25s; }
+.ap-pipe .s:nth-child(14n+1)  { color:#7C3AED; background:#F3EEFF; border-color:#C4B5FD; }
+.ap-pipe .s:nth-child(14n+3)  { color:#2563EB; background:#EAF1FF; border-color:#BFD3FE; }
+.ap-pipe .s:nth-child(14n+5)  { color:#0891B2; background:#E4F7FB; border-color:#A5E3F0; }
+.ap-pipe .s:nth-child(14n+7)  { color:#059669; background:#E3F8EF; border-color:#A7E9CC; }
+.ap-pipe .s:nth-child(14n+9)  { color:#D97706; background:#FFF4DE; border-color:#FCD9A0; }
+.ap-pipe .s:nth-child(14n+11) { color:#EA580C; background:#FFEDE3; border-color:#FDC4A6; }
+.ap-pipe .s:nth-child(14n+13) { color:#DB2777; background:#FFE8F3; border-color:#F9B4D5; }
+.ap-pipe .s.on { color:#fff !important; border-color:transparent !important; transform: translateY(-2px) scale(1.06);
+      background:linear-gradient(135deg,#7C3AED,#DB2777) !important; box-shadow:0 4px 12px rgba(219,39,119,.35); }
+.ap-pipe .a { color:#A78BFA; font-weight:700; }
+.ap-stage { border-radius:12px; background:linear-gradient(180deg,#FFFFFF,#FAF8FF); padding:.3rem; }
+.ap-stage.ap-anim { animation: apFade .35s ease; }
+@keyframes apFade { from { opacity:.35; transform: translateY(4px); } to { opacity:1; transform:none; } }
+.ap-action { background:linear-gradient(135deg,#E0F2FE,#F3EEFF); color:#4C1D95; border:1px solid #C4B5FD; }
+.ap-caption { background:#FFFBF2; border-right:4px solid #F59E0B; border-radius:8px; padding:.45rem .7rem; }
+.ap-caption b { color:#1E1B4B; }
+.ap-caption code { background:#F3EEFF; color:#5B21B6; }
+.ap-eq { background:linear-gradient(90deg,#EAF1FF,#E4F7FB); color:#1E3A8A; border-right:4px solid #2563EB; font-weight:600; }
+.ap-values th { background:linear-gradient(90deg,#F3EEFF,#EAF1FF); color:#3B1E8A; }
+.ap-values td:first-child { color:#7C3AED; font-weight:700; }
+.ap-values .new { color:#DB2777; }
+.ap-btn { background:#F3EEFF; border-color:#D9C8FF; color:#5B21B6; }
+.ap-btn:hover { background:#E9DEFF; }
+.ap-play { background:linear-gradient(135deg,#7C3AED,#2563EB); color:#fff; border:0; box-shadow:0 3px 10px rgba(124,58,237,.35); }
+.ap-sp-on { background:#FFE8F3; border-color:#DB2777; color:#DB2777; }
+.ap-range { accent-color:#DB2777; }
+@media (prefers-reduced-motion: reduce) { .ap * { transition:none !important; animation:none !important; } }
 """
 
 _JS = """
@@ -109,7 +143,7 @@ export default function (component) {
   }
   // New frames from Python (different signature) -> reset position.
   const sig = data.sig || String(frames.length);
-  if (st.sig !== sig) { st.sig = sig; st.i = Math.min(data.start || 0, Math.max(0, frames.length - 1)); stop(false); }
+  if (st.sig !== sig) { st.sig = sig; st.i = Math.min(data.start || 0, Math.max(0, frames.length - 1)); stop(false); root.querySelector(".ap-stage").dataset.i = ""; }
 
   const q = (s) => root.querySelector(s);
   q(".ap-title").textContent = data.title || "";
@@ -121,7 +155,12 @@ export default function (component) {
   function render() {
     const f = frames[st.i] || { html: "", caption: "", action: "", values: [], equation: "", highlight: null };
     q(".ap-counter").textContent = (st.i + 1) + " / " + frames.length;
-    q(".ap-stage").innerHTML = f.html || "";
+    const stg = q(".ap-stage");
+    if (stg.dataset.i !== String(st.i)) {           // new frame -> replay the fade-in
+      stg.dataset.i = String(st.i);
+      stg.innerHTML = f.html || "";
+      stg.classList.remove("ap-anim"); void stg.offsetWidth; stg.classList.add("ap-anim");
+    }
     q(".ap-action").textContent = f.action || "";
     q(".ap-caption").innerHTML = f.caption || "";
     q(".ap-eq").textContent = f.equation || "";
