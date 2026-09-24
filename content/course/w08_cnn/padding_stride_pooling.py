@@ -1,13 +1,16 @@
 import streamlit as st
 
-from components.callouts import common_mistake, definition, intuition, takeaway, why
+from components.animation_player import Frame, animation_player, caption
+from components.callouts import common_mistake, definition, interpretation_note, intuition, takeaway, why
 from components.code_lab import Before, CodeLab, code_lab, run_printed
 from components.comparison import compare_table
-from components.lesson_layout import h2, lesson_footer, lesson_header
+from components.lesson_layout import h2, h3, lesson_footer, lesson_header
 from components.math_explainer import equation
 from components.quiz import Q, quiz
 from core.models import Lesson
+from content.course.w08_cnn._viz import geometry_svg, pool_data, pool_svg
 from core.routing import go as goto
+from labs.cnn import out_size
 
 LESSON = Lesson(
     id="course.w08.padding_stride_pooling",
@@ -16,8 +19,8 @@ LESSON = Lesson(
     module="course.w08",
     order=3,
     prerequisites=["course.w08.convolution"],
-    objectives_ar=["صيغة حجم المخرج floor((n + 2p − k)/s) + 1 وتطبيقها.", "الحشو (same/valid) والخطوة وأثرهما على الحجم والحواف والحساب.", "التجميع الأقصى/المتوسط: لماذا، وماذا يفعل بالأشكال، وبلا معلمات."],
-    terms=["shape", "dimension"],
+    objectives_ar=["صيغة حجم المخرج floor((n + 2p − k)/s) + 1 وتطبيقها، ورؤية مواضع النواة مع الحشو والخطوة (تحريك).", "الحشو (same/valid) والخطوة وأثرهما على الحجم والحواف والحساب.", "التجميع الأقصى/المتوسط: لماذا، وماذا يفعل بالأشكال، وبلا معلمات."],
+    terms=["shape", "dimension", "padding", "stride", "pooling", "kernel", "feature_map"],
     labs=["labs.padding_stride_lab"],
     difficulty="intermediate",
     summary_ar="out = ⌊(n + 2p − k)/s⌋ + 1. same: p = (k−1)/2 يحفظ الحجم؛ valid: p = 0 ينقص k−1. الخطوة s تقسم الحجم. MaxPool(2) يقسم على 2 بلا معلمات ويضيف ثباتًا للإزاحة.",
@@ -55,6 +58,19 @@ def render() -> None:
              meaning_ar="صيغة واحدة تحدد حجم كل خريطة خصائص في أي CNN. احسبها بيدك قبل summary.", example_ar="28، k=3، p=1، s=1 → 28 (same). 28، k=3، p=0، s=1 → 26 (valid). 28، k=3، p=1، s=2 → 14.", dl_link_ar="`padding='same'` تحسب p تلقائيًا؛ `strides=2` تقلّص.", title_ar="صيغة حجم المخرج")
     definition("**الحشو** `padding`: إضافة أصفار حول الصورة كي تصل النواة إلى الحواف (`same` يحفظ الحجم، `valid` بلا حشو). **الخطوة** `stride`: قفزة النواة بين موضعين؛ s = 2 يقلّص الحجم إلى النصف تقريبًا. **التجميع** `pooling`: نافذة (2×2 عادةً) تُستبدل بأقصى قيمة فيها (max) أو متوسطها (avg) — يقلّص الحجم، بلا معلمات، ويجعل الكشف أقل حساسية للإزاحات الصغيرة.")
     why("بلا حشو، كل طبقة تقضم k−1 بكسلًا وتُهمل الحواف؛ 10 طبقات 3×3 تُلغي 20 بكسلًا. الخطوة والتجميع يقلّصان الصورة **عمدًا** لتوسيع «مجال الرؤية» لكل نواة لاحقة ولتقليل الحساب — من 28×28 بكسلات إلى 7×7 أنماط عالية المستوى.")
+    h2("الحشو والخطوة على الشبكة", "Padding and stride on the grid")
+    configs = [(5, 3, 0, 1, "valid, stride 1: النواة لا تخرج عن الصورة؛ 5 − 3 + 1 = 3 مواضع لكل محور، وبكسلات الحواف تُمسح أقل من غيرها."),
+               (5, 3, 1, 1, "same (p = 1): حلقة أصفار تسمح للنواة بأن تتمركز على كل بكسل، بما فيها الحواف ⇒ المخرج 5×5 بنفس حجم المدخل."),
+               (5, 3, 1, 2, "same + stride 2: النواة تقفز بكسلين ⇒ 3×3 فقط. التقليص يحدث داخل الالتفاف نفسه بأوزان متعلَّمة."),
+               (7, 3, 0, 2, "صورة 7×7 بلا حشو وخطوة 2: ⌊(7 − 3)/2⌋ + 1 = 3.")]
+    gframes = []
+    for n, k, p, s, txt in configs:
+        o = out_size(n, k, p, s)
+        for q in range(o * o):
+            note = f" {txt}" if (q == 0 or q == o * o - 1) else ""
+            gframes.append(Frame(geometry_svg(n, k, p, s, q), caption(f"**n = {n}، p = {p}، s = {s}** — الموضع {q + 1} من {o * o}.{note}"),
+                                 action=f"p={p} s={s}", values=[("output", "", f"{o}×{o}")]))
+    animation_player("w08_geom", gframes, title_ar="أين تقف النواة؟ أربعة إعدادات", interval_ms=450)
     code_lab(CodeLab(
         key="w08_psp", title_ar="الصيغة مقابل الفعلي، حشو الحواف، التجميع، وثبات الإزاحة", code=CODE, level="A",
         before=Before(goal_ar="التحقق من صيغة الحجم لأربع تراكيب (p, s)، رؤية ما يحفظه الحشو، وتطبيق التجميع ثم إثبات أنه يمتص إزاحة بكسل واحد.", stage_ar="الأسبوع 08: الحشو والخطوة والتجميع.",
@@ -64,6 +80,17 @@ def render() -> None:
         after_ar="- الصيغة تعمل على كل محور على حدة (H وW قد يختلفان).\n- التجميع «يعمّم» الموقع: «توجد حافة أفقية في هذا الربع» بدل «في البكسل 3».\n- خطوة 2 في الالتفاف تعطي تقليصًا مشابهًا مع معلمات متعلَّمة — بديل حديث للتجميع.",
     ))
     st.button("افتح معمل الحشو والخطوة والتجميع", icon=":material/science:", type="primary", on_click=goto, args=("labs.padding_stride_lab",), key="w08_lab_psp")
+    h3("التجميع الأقصى نافذةً نافذة", "Max-pooling window by window")
+    pd_ = pool_data()
+    pcaps = []
+    for q in range(4):
+        r, c = divmod(q, 2)
+        win = pd_["f"][2 * r:2 * r + 2, 2 * c:2 * c + 2]
+        pcaps.append(f"**النافذة ({r}, {c})**: القيم {win.ravel().tolist()} ⇒ الأقصى **{win.max():.0f}** (والمتوسط {win.mean():.2f}). أقوى استجابة للكاشف في هذا الربع تبقى، والباقي يُهمل.")
+    pcaps[-1] += " النتيجة 2×2: نصف الطول، ربع المساحة، **صفر معلمات**."
+    animation_player("w08_pool", [Frame(pool_svg(pd_, q), caption(c), action=f"window {q + 1}") for q, c in enumerate(pcaps)],
+                     title_ar="خريطة خصائص حقيقية (حافة عمودية + ReLU) → max-pool 2×2", interval_ms=1800)
+    interpretation_note("التجميع يجيب عن سؤال «هل رأى الكاشف نمطه **في مكان ما** من هذه المنطقة؟» بدل «أين بالضبط؟». هذا الفقد المقصود للموقع الدقيق هو ما يمنح الثبات للإزاحات الصغيرة.")
     compare_table(["الأداة", "الأثر على الحجم", "معلمات", "لماذا تستخدمه", "في Keras"],
                   [("padding='same'", "يحفظ H, W", "0", "طبقات كثيرة بلا فقدان الحواف", "`Conv2D(f, 3, padding='same')`"), ("padding='valid'", "−(k−1)", "0", "الافتراضي؛ عندما لا تهم الحواف", "`Conv2D(f, 3)`"), ("stride=2", "÷2 تقريبًا", "0 إضافية", "تقليص مع تعلّم (بدل التجميع)", "`Conv2D(f, 3, strides=2)`"),
                    ("MaxPooling2D(2)", "÷2", "0", "تقليص + ثبات للإزاحة + الأقوى يفوز", "`MaxPooling2D(2)`"), ("AveragePooling2D(2)", "÷2", "0", "تنعيم؛ أقل شيوعًا", "`AveragePooling2D(2)`"), ("GlobalAveragePooling2D", "(H, W, C) → (C,)", "0", "بديل Flatten يقلّل معلمات Dense", "`GlobalAveragePooling2D()`")],

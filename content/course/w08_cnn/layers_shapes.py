@@ -1,13 +1,15 @@
 import streamlit as st
 
-from components.callouts import common_mistake, intuition, research_note, takeaway, why
+from components.animation_player import Frame, animation_player, caption
+from components.callouts import common_mistake, intuition, math_note, research_note, takeaway, why
 from components.code_lab import Before, CodeLab, code_lab, run_printed
 from components.comparison import compare_table
 from components.diagram import diagram, svg_arrow, svg_box, svg_defs, svg_text
-from components.lesson_layout import h2, lesson_footer, lesson_header
+from components.lesson_layout import h2, h3, lesson_footer, lesson_header
 from components.quiz import Q
 from components.week import post_test
 from core.models import Lesson
+from content.course.w08_cnn._viz import flow_svg, receptive_svg, shape_rows
 from core.routing import go as goto
 from core.rtl import table
 from labs.cnn import shape_trace
@@ -19,8 +21,8 @@ LESSON = Lesson(
     module="course.w08",
     order=4,
     prerequisites=["course.w08.padding_stride_pooling", "foundations.architecture.parameter_count", "foundations.frameworks.keras.summary_deconstruction"],
-    objectives_ar=["الطبقات: Conv2D، Activation، MaxPooling، Flatten/GlobalAveragePooling، Dense، Dropout/BN.", "البنية النموذجية (LeNet-style) وتتبع الأشكال والمعلمات يدويًا ثم في summary.", "أين تتركز المعلمات ولماذا، والاختبار البعدي."],
-    terms=["parameter", "shape"],
+    objectives_ar=["الطبقات: Conv2D، Activation، MaxPooling، Flatten/GlobalAveragePooling، Dense، Dropout/BN.", "البنية النموذجية (LeNet-style) وتتبع الأشكال والمعلمات يدويًا (تحريك القمع) ثم في summary.", "نمو مجال الرؤية `receptive field` مع العمق (تحريك).", "أين تتركز المعلمات ولماذا، والاختبار البعدي."],
+    terms=["parameter", "shape", "cnn", "convolution", "pooling", "feature_map", "dense_layer"],
     labs=["labs.cnn_shape_calculator"],
     difficulty="intermediate",
     summary_ar="[Conv → ReLU → Pool] × n → Flatten → Dense → softmax. Conv: k²·C_in·C_out + C_out؛ Dense بعد Flatten: H·W·C × units — الأثقل. احسب الأشكال بالصيغة وطابق summary.",
@@ -85,6 +87,27 @@ def render() -> None:
                   ["code", "rtl", "code", "code", "code"])
     h2("البنية النموذجية", "A typical architecture")
     diagram("CNN بأسلوب LeNet لصور 28×28", _arch_svg(), what_ar="كتلتان [Conv → ReLU → Pool] ثم رأس كثيف. تحت كل صندوق شكل مخرجه.", how_ar="تتبع (H, W, C): same يحفظ H وW، Pool ينصفهما، filters يحدد C. Flatten يضرب الثلاثة. Dense بعد Flatten تحمل معظم المعلمات.", takeaway_ar="القمع: مكاني ينكمش، قنوات تتسع، ثم مصنّف.", title_en="LeNet-style CNN")
+    h3("القمع طبقةً طبقة", "The funnel, layer by layer")
+    rows = shape_rows()
+    fcaps = []
+    for i, r in enumerate(rows):
+        extra = {0: "صورة رمادية 28×28 بقناة واحدة.",
+                 1: "16 نواة 3×3 بحشو same: الحجم المكاني ثابت، والقنوات 1 → 16 (16 كاشفًا). معلمات: 3·3·1·16 + 16 = 160.",
+                 2: "التجميع ينصف H وW بلا معلمات: 28 → 14.",
+                 3: "32 نواة، كل واحدة ترى **16 قناة**: 3·3·16·32 + 32 = 4,640 معلمة.",
+                 4: "تجميع ثانٍ: 14 → 7. كل خلية الآن تلخّص منطقة كبيرة من الصورة الأصلية.",
+                 5: "Flatten: 7 × 7 × 32 = 1,568 رقمًا في متجه واحد — نهاية الجزء المكاني.",
+                 6: "Dense(64) على 1,568 مدخلًا: 1,568 × 64 + 64 = **100,416 معلمة** — 95% من الشبكة كلها في هذه الطبقة.",
+                 7: "Dense(10) + softmax: احتمال لكل من 10 فئات. 64 × 10 + 10 = 650."}.get(i, "")
+        fcaps.append(f"**{r['layer']}** → `{r['shape']}` · {r['params']:,} معلمة. {extra}")
+    animation_player("w08_flow", [Frame(flow_svg(rows, i), caption(c), action=rows[i]["layer"].split("(")[0], values=[("params (layer)", "", f"{rows[i]['params']:,}"), ("params (total)", "", f"{sum(x['params'] for x in rows[:i + 1]):,}")])
+                                  for i, c in enumerate(fcaps)], title_ar="الأشكال تنكمش مكانيًا وتتسع قنواتيًا", interval_ms=2200)
+    h3("مجال الرؤية: كم يرى كل بكسل في العمق؟", "Receptive field: how much does a deep unit see?")
+    animation_player("w08_rf", [Frame(receptive_svg(n), caption(f"**بعد {n} طبقة 3×3**: خلية واحدة في خريطة الخصائص تتأثر بنافذة {2 * n + 1}×{2 * n + 1} من الصورة الأصلية."
+                                                           + (" الطبقة الأولى ترى 3×3 فقط — حواف صغيرة." if n == 1 else "")
+                                                           + (" كل طبقة تضيف بكسلًا من كل جانب: هكذا تركّب الطبقات العميقة أنماطًا أكبر من أنماط أصغر." if n == 3 else "")),
+                                     action=f"{n} layers") for n in range(1, 6)], title_ar="نمو مجال الرؤية بتكديس نوى 3×3", interval_ms=1600)
+    math_note("لطبقات 3×3 بخطوة 1: RF = 1 + 2L. التجميع 2×2 أو الخطوة 2 **يضاعف** معدل النمو لكل ما بعدها، لذلك تصل الشبكات بعد بضع كتل إلى رؤية الصورة كلها بطبقات قليلة وأنوية صغيرة.")
     code_lab(CodeLab(
         key="w08_shapes", title_ar="تتبع الأشكال والمعلمات يدويًا ومطابقتها بـ summary، وبديل GlobalAveragePooling", code=CODE, level="B",
         before=Before(goal_ar="حساب شكل كل طبقة ومعلماتها بالصيغ ثم بناء نفس الشبكة في Keras والتحقق من التطابق، ورؤية أثر استبدال Flatten بـ GlobalAveragePooling.", stage_ar="الأسبوع 08: الأشكال.",
